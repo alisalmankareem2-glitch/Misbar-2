@@ -312,7 +312,7 @@ window.misbarHardReset=function(){
 /* ============================================================================
    [الأساس ١] رقم الإصدار ونظام التحديث التلقائي الفوري للزبائن (PWA Auto-Update)
    ============================================================================ */
-var APP_VERSION = "2.75.0";
+var APP_VERSION = "2.76.0";
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", function() {
@@ -1320,6 +1320,8 @@ function ppInpEye(path,label,val,type,flag,shown,inv){
   return '<label style="display:flex;align-items:center;gap:6px">'+label+'<button type="button" class="ed-ib" style="width:30px;height:30px;margin-inline-start:auto'+(shown?'':';opacity:.55')+'" onclick="psd(\''+flag+'\','+(inv?(shown?'false':'true'):(shown?'true':'false'))+')" aria-label="إظهار أو إخفاء في الورقة">'+mIc(shown?"eye":"eyeoff",18)+'</button><small class="mu" style="font-weight:400">'+(shown?'ظاهر':'مخفي')+'</small></label>'+
   '<input '+(type?'type="'+type+'" ':'')+'value="'+esc(val)+'" style="'+(shown?'':'opacity:.5')+'" oninput="ps(\''+path+'\',this.value)">';
 }
+var HL_LIST=[["solid","مستمر"],["double","مزدوج"],["dashed","متقطع"],["dotted","نقاط"],["thick","عريض"]];
+function hlChips(o){return HL_LIST.map(function(x){return '<button type="button" class="chip'+((o.hls||"solid")===x[0]?' on':'')+'" onclick="psd(\'o.hls\',\''+x[0]+'\')">'+x[1]+'</button>'}).join("")}
 function psd(path,v){var y=window.scrollY;ps(path,v);draw();window.scrollTo(0,y)}
 function pqs(i,k,v){edMark(true);S.pp.q[i][k]=v;edAuto();updSheet();edRenderSheet()}
 function edMfAll(f){var y=window.scrollY,p=S.pp;edMark(true);p.o.mf=f;p.q.forEach(function(q){q.mf=""});edAuto();draw();window.scrollTo(0,y)}
@@ -1477,6 +1479,7 @@ function paperH(){
   if(o.opt>0)h+='<div style="font-weight:700;color:'+c+';margin:4px 0">'+(rtl?'ملاحظة: أجب عن ('+dg(o.opt)+') من الأسئلة الآتية فقط.':'Note: Answer ('+dg(o.opt)+') of the following questions only.')+'</div>';
   if(o.note)h+='<div style="font-weight:600;background:#f8fafc;border-inline-start:3px solid '+c+';padding:3px 8px;margin:4px 0;font-size:.92em">'+tdg(o.note)+'</div>';
 
+  if(!o.noHL){var hs=o.hls||"solid",hb=hs==="double"?"3px double":(hs==="thick"?"3px solid":(hs==="dashed"?"1.5px dashed":(hs==="dotted"?"2px dotted":"1.5px solid")));h+='<div class="hl-line" style="border-top:'+hb+' '+c+';margin:8px 0 10px"></div>'}
   var view=p.view||"student",visQ=p.q.filter(function(q){return !q.hid});
   if(view==="key"){
     h+='<div style="text-align:center;font-weight:700;margin:10px 0;color:'+c+'">'+(rtl?'نموذج الإجابة':'Answer Key')+'</div>';
@@ -1887,9 +1890,10 @@ function ppEdScr(){
     var vi=0,r=edTotInfo();
     body='<div id="edTot" class="ed-tot noprint'+(r.ok?"":" bad")+'">'+r.html+'</div>'+
     '<div class="ed-q noprint"><div class="ed-qm" style="margin:0 0 6px"><span class="ql">يظهر في الورقة:</span>'+
-      [["الزمن",!o.noTime,"o.noTime",true],["التاريخ",!!o.showDate,"o.showDate",!o.showDate],["الدرجة الكلية",!o.noTotal,"o.noTotal",true],["درجات الأسئلة",!o.noQM,"o.noQM",true]].map(function(x){
+      [["الزمن",!o.noTime,"o.noTime",true],["التاريخ",!!o.showDate,"o.showDate",!o.showDate],["الدرجة الكلية",!o.noTotal,"o.noTotal",true],["درجات الأسئلة",!o.noQM,"o.noQM",true],["الخط تحت الترويسة",!o.noHL,"o.noHL",true]].map(function(x){
         var nv=x[2]==="o.showDate"?!o.showDate:!!x[1];
         return '<button class="chip'+(x[1]?' on':'')+'" onclick="psd(\''+x[2]+'\','+nv+')">'+(x[1]?'✓ ':'')+x[0]+'</button>'}).join("")+'</div>'+
+      (o.noHL?'':'<div class="ed-qm"><span class="ql">شكل الخط تحت الترويسة:</span>'+hlChips(o)+'</div>')+
       '<div class="ed-qm"><span class="ql">شكل الدرجة (للكل):</span>'+MF_LIST.map(function(x){return '<button class="chip'+((o.mf||"d")===x[0]?' on':'')+'" onclick="edMfAll(\''+x[0]+'\')">'+x[1]+'</button>'}).join("")+'</div>'+
       (o.mf==="c"?'<input style="margin-top:6px" value="'+esc(o.mc||"")+'" placeholder="اكتب ما يظهر مكان الدرجة، مثال: الدرجة {m} أو Mark {m}  ({m} = رقم الدرجة)" oninput="ps(\'o.mc\',this.value)">':'')+'</div>'+
     p.q.map(function(q,i){
@@ -1936,7 +1940,7 @@ function ppEdScr(){
       ppInp("o.note","ملاحظة أعلى الأسئلة (مثل: الإجابة على الورقة نفسها)",o.note))+
     sec("c","الطباعة والترقيم (A4)",
       
-      '<div class="mu" style="font-size:12px;margin:4px 0 8px">الزمن والتاريخ والدرجة الكلية: استعمل أيقونة العين بجانب كل حقل في «بيانات الورقة».</div>'+
+      '<label style="display:flex;align-items:center;gap:6px">الخط تحت ترويسة الورقة (قبل الأسئلة)<button type="button" class="ed-ib" style="width:30px;height:30px;margin-inline-start:auto'+(o.noHL?';opacity:.55':'')+'" onclick="psd(\'o.noHL\','+(o.noHL?'false':'true')+')" aria-label="إظهار أو إخفاء الخط">'+mIc(o.noHL?"eyeoff":"eye",18)+'</button><small class="mu" style="font-weight:400">'+(o.noHL?'مخفي':'ظاهر')+'</small></label>'+(o.noHL?'':'<div class="row" style="flex-wrap:wrap;gap:6px;margin:4px 0 10px">'+hlChips(o)+'</div>')+'<div class="mu" style="font-size:12px;margin:4px 0 8px">الزمن والتاريخ والدرجة الكلية: استعمل أيقونة العين بجانب كل حقل في «بيانات الورقة».</div>'+
       ppChk("o.name","سطر اسم الطالب والشعبة",o.name)+
       ppChk("o.bism","بسم الله الرحمن الرحيم",o.bism)+
       ppChk("o.border","إطار حول الصفحة",o.border)+
