@@ -312,7 +312,7 @@ window.misbarHardReset=function(){
 /* ============================================================================
    [الأساس ١] رقم الإصدار ونظام التحديث التلقائي الفوري للزبائن (PWA Auto-Update)
    ============================================================================ */
-var APP_VERSION = "2.74.0";
+var APP_VERSION = "2.75.0";
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", function() {
@@ -355,19 +355,26 @@ async function checkForLiveUpdate() {
 var _fromPopState = false;
 var _lastHistKey = "";
 function getNavStateKey(){
-  return [S.role||"", S.tab||0, S.curChatId||"", S.proPortal||"", S.scnDocId||"", S.profileOpen?1:0, S.subv?1:0, S.gw?S.gw.view:"", S.openMat?1:0, S.scnCam?1:0, S.scnEd?1:0, S.scnPrintDoc?1:0].join("|");
+  return [S.role||"", S.tab||0, S.curChatId||"", S.proPortal||"", S.scnDocId||"", S.profileOpen?1:0, S.subv?1:0, S.gw?S.gw.view:"", S.openMat?1:0, S.scnCam?1:0, S.scnEd?1:0, S.scnPrintDoc?1:0, S.pp?((S.pp.tab||"qs")+":"+(S.pp.view||"student")+":"+(S.pp.sheet?(S.pp.sheet.sub||"m"):"")):"", S.bk?(S.bk.tab||"info"):""].join("|");
+}
+function navSt(k){
+  var st={k:k};
+  st.gv=S.gw?S.gw.view:"";
+  if(S.pp){st.pt=S.pp.tab||"qs";if(st.pt==="form")st.pt="info";st.pv=S.pp.view||"student";st.ps=S.pp.sheet?(S.pp.sheet.sub||"m"):""}
+  if(S.bk){st.bt=S.bk.tab||"info"}
+  return st;
 }
 function syncHistoryState(){
   var k = getNavStateKey();
   if(_fromPopState){ _lastHistKey = k; return; }
   if(!_lastHistKey){
     _lastHistKey = k;
-    try{ history.replaceState({k:k}, ""); }catch(e){}
+    try{ history.replaceState(navSt(k), ""); }catch(e){}
     return;
   }
   if(k !== _lastHistKey){
     _lastHistKey = k;
-    try{ history.pushState({k:k}, ""); }catch(e){}
+    try{ history.pushState(navSt(k), ""); }catch(e){}
   }
 }
 window.addEventListener("popstate", function(e){
@@ -378,7 +385,7 @@ window.addEventListener("popstate", function(e){
   if(S.subv){ S.subv = 0; draw(); _fromPopState = false; return; }
   if(S.curChatId !== null){ S.curChatId = null; draw(); _fromPopState = false; return; }
   if(S.openMat !== null){ S.openMat = null; S.out = ""; S.quiz = null; draw(); _fromPopState = false; return; }
-  if(S.pp !== null || S.bk !== null || S.gw !== null){ S.pp = null; S.bk = null; S.gw = null; draw(); _fromPopState = false; return; }
+  if(S.pp !== null || S.bk !== null || S.gw !== null){ edApplyNav(e.state); _fromPopState = false; return; }
   if(S.proPortal !== null){ S.proPortal = null; draw(); _fromPopState = false; return; }
   if(S.scnDocId !== null){ setOpenScnDoc(null); draw(); _fromPopState = false; return; }
   if(S.role !== null && S.tab > 0){ S.tab = 0; draw(); _fromPopState = false; return; }
@@ -1308,9 +1315,14 @@ function ppMarkTxt(q,o,rtl,dg){
   return " ("+t+")";
 }
 function ppDateTxt(f){var d=String(f.date||"")||new Date().toISOString().slice(0,10),a=d.split("-");return a.length===3?a[2]+"/"+a[1]+"/"+a[0]:d}
-function psd(path,v){ps(path,v);draw()}
+function ppInpEye(path,label,val,type,flag,shown,inv){
+  var nv=inv?!shown:shown;
+  return '<label style="display:flex;align-items:center;gap:6px">'+label+'<button type="button" class="ed-ib" style="width:30px;height:30px;margin-inline-start:auto'+(shown?'':';opacity:.55')+'" onclick="psd(\''+flag+'\','+(inv?(shown?'false':'true'):(shown?'true':'false'))+')" aria-label="إظهار أو إخفاء في الورقة">'+mIc(shown?"eye":"eyeoff",18)+'</button><small class="mu" style="font-weight:400">'+(shown?'ظاهر':'مخفي')+'</small></label>'+
+  '<input '+(type?'type="'+type+'" ':'')+'value="'+esc(val)+'" style="'+(shown?'':'opacity:.5')+'" oninput="ps(\''+path+'\',this.value)">';
+}
+function psd(path,v){var y=window.scrollY;ps(path,v);draw();window.scrollTo(0,y)}
 function pqs(i,k,v){edMark(true);S.pp.q[i][k]=v;edAuto();updSheet();edRenderSheet()}
-function edMfAll(f){var p=S.pp;edMark(true);p.o.mf=f;p.q.forEach(function(q){q.mf=""});edAuto();draw()}
+function edMfAll(f){var y=window.scrollY,p=S.pp;edMark(true);p.o.mf=f;p.q.forEach(function(q){q.mf=""});edAuto();draw();window.scrollTo(0,y)}
 
 /* ==================== ١) محرر ورقة الأسئلة A4 ==================== */
 function ppNew(subj,sample){
@@ -1674,7 +1686,22 @@ function edAuto(){clearTimeout(_edT);var e=$("edSt");if(e)e.textContent="جار�
 function edDraft(){try{var r=JSON.parse(localStorage.getItem("misbar_draft_pp_"+(S.uid||"anon"))||"null");return r&&r.data&&r.data.q?r:null}catch(e){return null}}
 function edResume(){var d=edDraft();if(!d)return;S.pp=d.data;S.pp.tab="qs";S.gw={view:"ed_q"};draw()}
 function edDropDraft(){try{localStorage.removeItem("misbar_draft_pp_"+(S.uid||"anon"))}catch(e){}draw()}
-function edBack(){edSave();var h=$("edHost");if(h)h.remove();S.pp=null;S.gw=null;draw()}
+function edApplyNav(st){
+  if(!st||st.k===undefined){if(S.pp)edSave();S.pp=null;S.bk=null;S.gw=null;draw();return}
+  if(S.pp){
+    if(st.pt===undefined){edSave();S.pp=null}
+    else{var p=S.pp;p.tab=st.pt;p.view=st.pv||"student";if(!st.ps)p.sheet=null;else if(p.sheet)p.sheet.sub=(st.ps==="m"?null:st.ps)}
+  }
+  if(S.bk){if(st.bt===undefined)S.bk=null;else S.bk.tab=st.bt}
+  if(S.gw){if(!st.gv)S.gw=null;else S.gw.view=st.gv}
+  draw();
+}
+/* رجوع خطوة واحدة (يستعمل سجل التنقل حتى يتطابق مع زر الرجوع في الجهاز) */
+function edBack(){
+  var st=history.state;
+  if(st&&st.k!==undefined&&history.length>1){try{history.back();return}catch(x){}}
+  edSave();var h=$("edHost");if(h)h.remove();S.pp=null;S.bk=null;S.gw=null;draw()
+}
 
 /* ---- أدوات مساعدة ---- */
 function edGrow(el){el.style.height="auto";el.style.height=Math.max(44,el.scrollHeight)+"px"}
@@ -1685,7 +1712,7 @@ function edTotInfo(){var p=S.pp,sum=0,nom=0,vis=0;p.q.forEach(function(q){if(q.h
   return {ok:ok,html:mIc(ok?"check":"warn",18)+'<span class="grow">مجموع الدرجات: '+r(sum)+' من '+(isFinite(g)?g:"؟")+msg+'</span><span>'+vis+' سؤال</span>'}}
 function edTot(){var e=$("edTot");if(!e||!S.pp)return;var r=edTotInfo();e.className="ed-tot noprint"+(r.ok?"":" bad");e.innerHTML=r.html}
 function edTab(t){var p=S.pp;p.tab=t;p.sheet=null;if(t!=="prev")p.view="student";draw();window.scrollTo(0,0)}
-function edSetQ(i,k,v){edMark(true);S.pp.q[i][k]=v;edAuto();draw()}
+function edSetQ(i,k,v){var y=window.scrollY;edMark(true);S.pp.q[i][k]=v;edAuto();draw();window.scrollTo(0,y)}
 function edHide(i){edSetQ(i,"hid",!S.pp.q[i].hid)}
 function edTogNp(i){edSetQ(i,"np",!S.pp.q[i].np)}
 function edPick(i,d){var q=S.pp.q[i];edMark(true);q.pick=Math.max(0,(Number(q.pick)||0)+d);edAuto();draw()}
@@ -1710,8 +1737,8 @@ function edDrive(view){var p=S.pp,old=p.view;p.view=view||"student";var h=paperH
 function edR(ic,t,sub,on,cls){return '<button class="ed-row'+(cls?' '+cls:'')+'" onclick="'+on+'"><span class="ed-ico">'+mIc(ic)+'</span><span><b>'+t+'</b>'+(sub?'<small>'+sub+'</small>':'')+'</span></button>'}
 function edHost(){var h=$("edHost");if(!h){h=document.createElement("div");h.id="edHost";document.body.appendChild(h)}return h}
 function edRenderSheet(){var p=S.pp,sh=p&&p.sheet,h=$("edHost");if(!sh){if(h)h.remove();return}
-  h=edHost();h.innerHTML='<div class="ed-ov" onclick="edCloseSheet()"></div><div class="ed-sheet" role="dialog" aria-modal="true"><div class="ed-grab"></div>'+edSheetBody(sh)+'</div>'}
-function edCloseSheet(){if(S.pp)S.pp.sheet=null;var h=$("edHost");if(h)h.remove()}
+  h=edHost();h.innerHTML='<div class="ed-ov" onclick="edCloseSheet()"></div><div class="ed-sheet" role="dialog" aria-modal="true"><div class="ed-grab"></div>'+edSheetBody(sh)+'</div>';syncHistoryState()}
+function edCloseSheet(){if(S.pp&&S.pp.sheet&&history.state&&history.state.ps){try{history.back();return}catch(x){}}if(S.pp)S.pp.sheet=null;var h=$("edHost");if(h)h.remove()}
 
 function markPrevH(q){
   var rt=isWlangRtl(S.pp.o.wlang),qq=Object.assign({},q,{m:q.m||"10",hm:false}),m=ppMarkTxt(qq,Object.assign({},S.pp.o,{noQM:false}),rt,function(x){return convDigits(x,S.pp.o.digits)}).trim(),mp=q.mp||"",t='<b>Q1</b>',b='نص السؤال يظهر هنا',line;
@@ -1740,19 +1767,40 @@ function tbSheetH(){
   return h;
 }
 function edQSheet(i){S.pp.sheet={t:"q",i:i,sub:null};edRenderSheet()}
+function edQPrev(i){S.pp.sheet={t:"q",i:i,sub:"qprev"};edRenderSheet()}
+function edQPrevH(i){
+  var p=S.pp,q=p.q[i],oh=q.hid,ov=p.view,k=0,t=document.createElement("div"),w,b;
+  for(var j=0;j<i;j++)if(!p.q[j].hid)k++;
+  q.hid=false;p.view="student";
+  try{t.innerHTML=paperH()}finally{q.hid=oh;p.view=ov}
+  w=t.firstElementChild;b=t.querySelectorAll(".q-blk")[k];
+  if(!b||!w)return '<div class="mu">تعذّرت المعاينة</div>';
+  return '<div dir="'+(w.getAttribute("dir")||"rtl")+'" style="'+(w.getAttribute("style")||"")+';background:#fff;color:#000;padding:14px;border-radius:10px;overflow:auto;max-height:46vh">'+b.outerHTML+'</div>';
+}
+function edQPrevCtl(i,q){
+  var chp=function(a,on,fn){return '<button class="chip'+(on?' on':'')+'" onclick="'+fn+'">'+a+'</button>'};
+  var pos=[["","بجانب رقم السؤال"],["end","نهاية السؤال"],["right","أقصى اليمين"],["center","وسط"],["left","أقصى اليسار"]];
+  return '<label style="margin-top:12px">الدرجة في الورقة</label><div class="row" style="gap:6px;margin:4px 0">'+chp("ظاهرة",!q.hm,"pqs("+i+",\'hm\',false)")+chp("مخفية",!!q.hm,"pqs("+i+",\'hm\',true)")+'</div>'+
+  (q.hm?'':'<label>مكان الدرجة</label><div class="row" style="flex-wrap:wrap;gap:6px;margin:4px 0">'+pos.map(function(x){return chp(x[1],(q.mp||"")===x[0],"pqs("+i+",\'mp\',\'"+x[0]+"\')")}).join("")+'</div>'+
+  '<label>شكل كتابة الدرجة</label><div class="row" style="flex-wrap:wrap;gap:6px;margin:4px 0">'+[["","حسب الإعداد العام"]].concat(MF_LIST).map(function(x){return chp(x[1],(q.mf||"")===x[0],"pqs("+i+",\'mf\',\'"+x[0]+"\')")}).join("")+'</div>'+
+  (q.mf==="c"?'<input value="'+esc(q.mc||"")+'" placeholder="اكتب ما يظهر مكان الدرجة (مثال: الدرجة {m} أو Mark {m})" oninput="pq('+i+',\'mc\',this.value);edQPrevRef('+i+')">':''))+
+  '<label>محاذاة نص السؤال</label><div class="row" style="flex-wrap:wrap;gap:6px;margin:4px 0">'+[["","تلقائي"],["right","يمين"],["center","وسط"],["left","يسار"]].map(function(x){return chp(x[1],(q.al||"")===x[0],"pqs("+i+",\'al\',\'"+x[0]+"\')")}).join("")+'</div>'+
+  '<button class="b s" style="width:100%;margin-top:8px" onclick="edSetQ('+i+',\'hid\','+(!q.hid)+')">'+(q.hid?"إظهار السؤال في الورقة":"إخفاء السؤال من الورقة")+'</button>';
+}
+function edQPrevRef(i){var e=document.getElementById("qprevBox");if(e)e.innerHTML=edQPrevH(i)}
 function edDocSheet(){S.pp.sheet={t:"doc",sub:null};edRenderSheet()}
-function edSub(s){S.pp.sheet.sub=s;edRenderSheet()}
+function edSub(s){if(!s&&history.state&&history.state.ps&&history.state.ps!=="m"){try{history.back();return}catch(x){}}S.pp.sheet.sub=s;edRenderSheet()}
 function edSheetBody(sh){
   var p=S.pp,sub=sh.sub,i=sh.i,q=sh.t==="q"?p.q[i]:null,h="",title;
   if(sh.t==="q"&&!q)return "";
-  var titles={lay:"تنسيق وتخطيط السؤال",tb:"مربعات النص",color:"لون السؤال",add:"أضف داخل السؤال",marks:"درجة السؤال",pick:"أجب عن عدد محدد",num:"تغيير الترقيم",ans:"نموذج الإجابة",sym:"رموز وحروف",bank:"إضافة من بنك الأسئلة"};
+  var titles={qprev:"معاينة السؤال",lay:"تنسيق وتخطيط السؤال",tb:"مربعات النص",color:"لون السؤال",add:"أضف داخل السؤال",marks:"درجة السؤال",pick:"أجب عن عدد محدد",num:"تغيير الترقيم",ans:"نموذج الإجابة",sym:"رموز وحروف",bank:"إضافة من بنك الأسئلة"};
   title=sub?titles[sub]:(sh.t==="q"?"خيارات السؤال":"أدوات الورقة");
   var head='<div class="ed-sh-h"><b>'+title+'</b><button class="ed-ib" onclick="'+(sub?"edSub(null)":"edCloseSheet()")+'" aria-label="'+(sub?"رجوع":"إغلاق")+'">'+mIc(sub?"back":"close")+'</button></div>';
   if(sh.t==="q"){
     if(!sub){
       h=edR("palette","لون السؤال","اختياري — يشمل ترقيمه وفروعه","edSub('color')")+
         edR("plus","أضف داخله…","فرع، خيارات، صورة، اتجاه العرض","edSub('add')")+
-        edR("hash","الدرجة",q.m?esc(q.m):"بلا درجة","edSub('marks')")+
+        edR("eye","معاينة السؤال كما في الورقة","وتعديل مكان الدرجة وشكلها مباشرة","edSub('qprev')")+edR("hash","الدرجة",q.m?esc(q.m):"بلا درجة","edSub('marks')")+edR(q.hid?"eyeoff":"eye",q.hid?"إظهار السؤال في الورقة":"إخفاء السؤال من الورقة",q.hid?"مخفي حالياً":"ظاهر حالياً","edSetQ("+i+",'hid',"+(!q.hid)+")")+
         edR("layout","تنسيق وتخطيط السؤال","مكان الدرجة، المحاذاة، عرض السؤال وموضعه","edSub('lay')")+
         edR("pick","أجب عن عدد محدد",Number(q.pick)>0?"مفعّل: "+q.pick+" فروع":"مثل: أجب عن فرعين فقط","edSub('pick')")+
         edR("num","تغيير الترقيم",q.num?esc(q.num):"أو اكتب عنواناً مثل «القواعد»","edSub('num')")+
@@ -1770,15 +1818,17 @@ function edSheetBody(sh){
           '<button onclick="edMv('+i+',1)">'+mIc("down")+'للأسفل</button>'+
         '</div>'+
         edR("trash","حذف السؤال","","edDel("+i+")","dg");
+    }else if(sub==="qprev"){
+      h='<div class="mu" style="font-size:12px;margin-bottom:8px">هكذا يظهر السؤال في الورقة'+(q.hid?' — (السؤال مخفي حالياً)':'')+'</div><div id="qprevBox">'+edQPrevH(i)+'</div>'+edQPrevCtl(i,q);
     }else if(sub==="color"){
       h='<div class="mu" style="font-size:12px">اختياري — يشمل ترقيم السؤال وفروعه</div><div class="ed-sw">'+ED_COLS.map(function(c){return '<button style="background:'+c+'" class="'+(q.col===c?"on":"")+'" onclick="edSetQ('+i+',\'col\',\''+c+'\')" aria-label="'+c+'"></button>'}).join("")+'</div>'+
         '<div class="row" style="gap:8px"><input type="color" value="'+(q.col||"#000000")+'" oninput="pq('+i+',\'col\',this.value)" style="width:56px;height:40px;padding:2px;margin:0"><button class="b s" onclick="edSetQ('+i+',\'col\',\'\')">استعادة لون القالب</button></div>';
     }else if(sub==="lay"){
-h='<label>مكان الدرجة في الورقة</label>'+'<div class="row" style="flex-wrap:wrap;gap:6px;margin:4px 0 12px">'+[["","بجانب العنوان"],["end","في نهاية السؤال"],["right","الجانب الأيمن"],["center","الوسط"],["left","الجانب الأيسر"]].map(function(x){return '<button class="chip'+((q.mp||"")===x[0]?' on':'')+'" onclick="pqs('+i+',\'mp\',\''+x[0]+'\')">'+x[1]+'</button>'}).join("")+'</div>'+'<label>محاذاة نص السؤال</label>'+'<div class="row" style="flex-wrap:wrap;gap:6px;margin:4px 0 12px">'+[["","افتراضي"],["right","يمين"],["center","وسط"],["left","يسار"]].map(function(x){return '<button class="chip'+((q.al||"")===x[0]?' on':'')+'" onclick="pqs('+i+',\'al\',\''+x[0]+'\')">'+x[1]+'</button>'}).join("")+'</div>'+'<label>عرض السؤال في الصفحة</label>'+'<div class="row" style="flex-wrap:wrap;gap:6px;margin:4px 0 12px">'+[["","كامل"],["75","75%"],["50","50%"],["33","33%"]].map(function(x){return '<button class="chip'+((String(q.bw||"")||"")===x[0]?' on':'')+'" onclick="pqs('+i+',\'bw\',\''+x[0]+'\')">'+x[1]+'</button>'}).join("")+'</div>'+'<label>موضع السؤال (إذا كان العرض أقل من كامل)</label>'+'<div class="row" style="flex-wrap:wrap;gap:6px;margin:4px 0 12px">'+[["right","يمين"],["center","وسط"],["left","يسار"]].map(function(x){return '<button class="chip'+((q.ba||"")===x[0]?' on':'')+'" onclick="pqs('+i+',\'ba\',\''+x[0]+'\')">'+x[1]+'</button>'}).join("")+'</div>'+'<button class="b s" style="width:100%" onclick="edLayAll('+i+')">تطبيق هذا التنسيق على كل الأسئلة</button>';
+h='<label>مكان الدرجة في الورقة</label>'+'<div class="row" style="flex-wrap:wrap;gap:6px;margin:4px 0 12px">'+[["","بجانب رقم السؤال"],["end","في نهاية السؤال"],["right","أقصى اليمين"],["center","الوسط"],["left","أقصى اليسار"]].map(function(x){return '<button class="chip'+((q.mp||"")===x[0]?' on':'')+'" onclick="pqs('+i+',\'mp\',\''+x[0]+'\')">'+x[1]+'</button>'}).join("")+'</div>'+'<label>محاذاة نص السؤال</label>'+'<div class="row" style="flex-wrap:wrap;gap:6px;margin:4px 0 12px">'+[["","افتراضي"],["right","يمين"],["center","وسط"],["left","يسار"]].map(function(x){return '<button class="chip'+((q.al||"")===x[0]?' on':'')+'" onclick="pqs('+i+',\'al\',\''+x[0]+'\')">'+x[1]+'</button>'}).join("")+'</div>'+'<label>عرض السؤال في الصفحة</label>'+'<div class="row" style="flex-wrap:wrap;gap:6px;margin:4px 0 12px">'+[["","كامل"],["75","75%"],["50","50%"],["33","33%"]].map(function(x){return '<button class="chip'+((String(q.bw||"")||"")===x[0]?' on':'')+'" onclick="pqs('+i+',\'bw\',\''+x[0]+'\')">'+x[1]+'</button>'}).join("")+'</div>'+'<label>موضع السؤال (إذا كان العرض أقل من كامل)</label>'+'<div class="row" style="flex-wrap:wrap;gap:6px;margin:4px 0 12px">'+[["right","يمين"],["center","وسط"],["left","يسار"]].map(function(x){return '<button class="chip'+((q.ba||"")===x[0]?' on':'')+'" onclick="pqs('+i+',\'ba\',\''+x[0]+'\')">'+x[1]+'</button>'}).join("")+'</div>'+'<button class="b s" style="width:100%" onclick="edLayAll('+i+')">تطبيق هذا التنسيق على كل الأسئلة</button>';
 }else if(sub==="marks"){
       h='<label>درجة السؤال (أرقام صحيحة أو عشرية)</label><input type="number" inputmode="decimal" step="0.5" value="'+esc(q.m)+'" oninput="pq('+i+',\'m\',this.value);edTot()" style="font-size:18px">'+
         '<div class="row" style="flex-wrap:wrap;gap:6px;margin-top:8px">'+[1,2,3,5,10,15,20].map(function(n){return '<button class="chip" onclick="edSetQ('+i+',\'m\',\''+n+'\')">'+n+'</button>'}).join("")+'</div>'+
-        '<label style="margin-top:12px">مكان الدرجة في الورقة</label><div class="row" style="flex-wrap:wrap;gap:6px;margin:4px 0">'+[["","بجانب العنوان"],["end","في نهاية السؤال"],["right","الجانب الأيمن"],["center","الوسط"],["left","الجانب الأيسر"]].map(function(x){return '<button class="chip'+((q.mp||"")===x[0]?' on':'')+'" onclick="pqs('+i+',\'mp\',\''+x[0]+'\')">'+x[1]+'</button>'}).join("")+'</div>'+'<label style="margin-top:12px">إظهار الدرجة في الورقة</label><div class="row" style="gap:6px;margin:4px 0"><button class="chip'+(!q.hm?' on':'')+'" onclick="pqs('+i+',\'hm\',false)">ظاهرة</button><button class="chip'+(q.hm?' on':'')+'" onclick="pqs('+i+',\'hm\',true)">مخفية</button></div>'+'<label style="margin-top:8px">شكل كتابة الدرجة</label><div class="row" style="flex-wrap:wrap;gap:6px;margin:4px 0">'+[["","حسب الإعداد العام"]].concat(MF_LIST).map(function(x){return '<button class="chip'+((q.mf||"")===x[0]?' on':'')+'" onclick="pqs('+i+',\'mf\',\''+x[0]+'\')">'+x[1]+'</button>'}).join("")+'</div>'+((q.mf==="c")?'<input value="'+esc(q.mc||"")+'" placeholder="مثال: الدرجة {m} من 10" oninput="pq('+i+',\'mc\',this.value)">':'')+markPrevH(q)+'<div class="mu" style="font-size:12px;margin-top:10px">'+edTotInfo().html.replace(/<[^>]+>/g,"")+'</div>';
+        '<label style="margin-top:12px">مكان الدرجة في الورقة</label><div class="row" style="flex-wrap:wrap;gap:6px;margin:4px 0">'+[["","بجانب رقم السؤال"],["end","في نهاية السؤال"],["right","أقصى اليمين"],["center","الوسط"],["left","أقصى اليسار"]].map(function(x){return '<button class="chip'+((q.mp||"")===x[0]?' on':'')+'" onclick="pqs('+i+',\'mp\',\''+x[0]+'\')">'+x[1]+'</button>'}).join("")+'</div>'+'<label style="margin-top:12px">إظهار الدرجة في الورقة</label><div class="row" style="gap:6px;margin:4px 0"><button class="chip'+(!q.hm?' on':'')+'" onclick="pqs('+i+',\'hm\',false)">ظاهرة</button><button class="chip'+(q.hm?' on':'')+'" onclick="pqs('+i+',\'hm\',true)">مخفية</button></div>'+'<label style="margin-top:8px">شكل كتابة الدرجة</label><div class="row" style="flex-wrap:wrap;gap:6px;margin:4px 0">'+[["","حسب الإعداد العام"]].concat(MF_LIST).map(function(x){return '<button class="chip'+((q.mf||"")===x[0]?' on':'')+'" onclick="pqs('+i+',\'mf\',\''+x[0]+'\')">'+x[1]+'</button>'}).join("")+'</div>'+((q.mf==="c")?'<input value="'+esc(q.mc||"")+'" placeholder="مثال: الدرجة {m} من 10" oninput="pq('+i+',\'mc\',this.value)">':'')+markPrevH(q)+'<div class="mu" style="font-size:12px;margin-top:10px">'+edTotInfo().html.replace(/<[^>]+>/g,"")+'</div>';
     }else if(sub==="pick"){
       h='<div class="mu" style="line-height:1.7">تظهر في الورقة عبارة «أجب عن (N) من الفروع الآتية» أعلى فروع هذا السؤال.</div>'+
         '<div class="row" style="margin:12px 0;justify-content:center;gap:14px"><button class="b s" onclick="edPick('+i+',-1)">−</button><b style="min-width:150px;text-align:center">'+(Number(q.pick)>0?"أجب عن "+q.pick+" من الفروع":"الكل (بدون تحديد)")+'</b><button class="b s" onclick="edPick('+i+',1)">+</button></div>';
@@ -1841,7 +1891,7 @@ function ppEdScr(){
         var nv=x[2]==="o.showDate"?!o.showDate:!!x[1];
         return '<button class="chip'+(x[1]?' on':'')+'" onclick="psd(\''+x[2]+'\','+nv+')">'+(x[1]?'✓ ':'')+x[0]+'</button>'}).join("")+'</div>'+
       '<div class="ed-qm"><span class="ql">شكل الدرجة (للكل):</span>'+MF_LIST.map(function(x){return '<button class="chip'+((o.mf||"d")===x[0]?' on':'')+'" onclick="edMfAll(\''+x[0]+'\')">'+x[1]+'</button>'}).join("")+'</div>'+
-      (o.mf==="c"?'<input style="margin-top:6px" value="'+esc(o.mc||"")+'" placeholder="مثال: الدرجة {m} من 10  (استعمل {m} مكان الرقم)" oninput="ps(\'o.mc\',this.value)">':'')+'</div>'+
+      (o.mf==="c"?'<input style="margin-top:6px" value="'+esc(o.mc||"")+'" placeholder="اكتب ما يظهر مكان الدرجة، مثال: الدرجة {m} أو Mark {m}  ({m} = رقم الدرجة)" oninput="ps(\'o.mc\',this.value)">':'')+'</div>'+
     p.q.map(function(q,i){
       var chip=q.hid?"—":(q.num?esc(q.num):convDigits(String(++vi),o.digits));
       var chips=[];
@@ -1849,9 +1899,9 @@ function ppEdScr(){
       return '<div class="ed-q'+(q.hid?" off":"")+'" id="edq_'+i+'">'+
         '<div class="ed-qh"><span class="ed-num" style="'+(q.col?"background:"+esc(q.col):"")+'">'+chip+'</span><span class="grow"></span>'+
           '<input class="ed-marks" type="number" inputmode="decimal" step="0.5" placeholder="الدرجة" value="'+esc(q.m)+'" oninput="pq('+i+',\'m\',this.value);edTot()">'+
-          '<button class="ed-ib" onclick="edHide('+i+')" aria-label="إظهار أو إخفاء">'+mIc(q.hid?"eyeoff":"eye")+'</button>'+
+          '<button class="ed-ib" onclick="edQPrev('+i+')" aria-label="معاينة السؤال كما في الورقة">'+mIc(q.hid?"eyeoff":"eye")+'</button>'+
           '<button class="ed-ib" onclick="edQSheet('+i+')" aria-label="خيارات السؤال">'+mIc("dots")+'</button></div>'+
-        '<div class="ed-qm"><button class="chip'+(!q.hm?' on':'')+'" onclick="edSetQ('+i+',\'hm\','+(!q.hm)+')">'+(q.hm?'الدرجة مخفية':'الدرجة ظاهرة')+'</button>'+(q.hm?'':[["","بالعنوان"],["right","يمين"],["center","وسط"],["left","يسار"],["end","نهاية"]].map(function(x){return '<button class="chip'+((q.mp||"")===x[0]?' on':'')+'" onclick="edSetQ('+i+',\'mp\',\''+x[0]+'\')">'+x[1]+'</button>'}).join("")+'<select onchange="edSetQ('+i+',\'mf\',this.value)"><option value="">شكل: عام</option>'+MF_LIST.map(function(x){return '<option value="'+x[0]+'"'+(q.mf===x[0]?' selected':'')+'>'+x[1]+'</option>'}).join("")+'</select>')+'</div>'+
+        '<div class="ed-qm"><button class="chip'+(!q.hm?' on':'')+'" onclick="edSetQ('+i+',\'hm\','+(!q.hm)+')">'+(q.hm?'الدرجة مخفية':'الدرجة ظاهرة')+'</button>'+(q.hm?'':[["","بجانب الرقم"],["right","يمين"],["center","وسط"],["left","يسار"],["end","نهاية"]].map(function(x){return '<button class="chip'+((q.mp||"")===x[0]?' on':'')+'" onclick="edSetQ('+i+',\'mp\',\''+x[0]+'\')">'+x[1]+'</button>'}).join("")+'<select onchange="edSetQ('+i+',\'mf\',this.value)"><option value="">شكل: عام</option>'+MF_LIST.map(function(x){return '<option value="'+x[0]+'"'+(q.mf===x[0]?' selected':'')+'>'+x[1]+'</option>'}).join("")+'</select>')+((!q.hm&&q.mf==="c")?'<input style="flex:1;min-width:150px;margin:0;padding:5px 8px;font-size:12px" value="'+esc(q.mc||"")+'" placeholder="اكتب ما يظهر مكان الدرجة، مثال: الدرجة {m}" oninput="pq('+i+',\'mc\',this.value)">':'')+'</div>'+
         '<div class="ed-qm"><span class="ql">السؤال:</span>'+[["","تلقائي"],["right","يمين"],["center","وسط"],["left","يسار"]].map(function(x){return '<button class="chip'+((q.al||"")===x[0]?' on':'')+'" onclick="edSetQ('+i+',\'al\',\''+x[0]+'\')">'+x[1]+'</button>'}).join("")+'</div>'+
         '<textarea class="ed-ta" id="qt_'+i+'" dir="'+ppAutoDir(q.t)+'" rows="2" placeholder="اكتب نص السؤال…" oninput="pq('+i+',\'t\',this.value);edGrow(this)">'+esc(q.t)+'</textarea>'+
         ((q.s||q.showS)?'<textarea class="ed-ta" id="qs_'+i+'" dir="'+ppAutoDir(q.s)+'" rows="2" style="margin-top:6px" placeholder="الفروع أو الخيارات — سطر لكل فرع" oninput="pq('+i+',\'s\',this.value);edGrow(this)">'+esc(q.s)+'</textarea>':'<button class="ed-add" onclick="edShowS('+i+')">+ فروع أو خيارات</button>')+
@@ -1872,7 +1922,7 @@ function ppEdScr(){
       ppInp("f.title","عنوان الامتحان (شهري / نصف السنة / نهائي / مخصص)",fo.title)+
       ppInp("f.stage","المرحلة والصف",fo.stage)+
       '<div class="grid">'+ppSel("f.round","الكورس أو الدور",["الكورس الأول","الكورس الثاني","الدور الأول","الدور الثاني","First Course","Second Course"],fo.round)+ppInp("f.year","السنة الدراسية",fo.year)+'</div>'+
-      '<div class="grid">'+ppInp("f.dur","المدة",fo.dur)+ppInp("f.grade","الدرجة الكلية",fo.grade,"number")+'</div>'+ppInp("f.date","التاريخ (إذا تُرك فارغاً يُستعمل تاريخ اليوم)",fo.date||"","date")+
+      '<div class="grid">'+'<div><div>'+ppInpEye("f.dur","المدة (الزمن)",fo.dur,"","o.noTime",!o.noTime,false)+'</div></div><div><div>'+ppInpEye("f.grade","الدرجة الكلية",fo.grade,"number","o.noTotal",!o.noTotal,false)+'</div></div></div>'+ppInpEye("f.date","التاريخ (فارغ = تاريخ اليوم)",fo.date||"","date","o.showDate",!!o.showDate,true)+
       ppInp("f.teacher","اسم المعلم / المدرس",fo.teacher)+
       '<label>صفة المعلم في الورقة</label><div class="row" style="flex-wrap:wrap;margin-bottom:8px">'+["مدرس المادة","مدرسة المادة","معلم","معلمة","Subject Teacher","مسمى مخصص"].map(function(x){return '<button type="button" class="chip '+(fo.tt==x?"on":"")+'" onclick="ps(\'f.tt\',\''+x+'\')">'+x+'</button>'}).join("")+'</div>'+
       (fo.tt=="مسمى مخصص"?ppInp("f.ttCustom","اكتب الصفة المخصصة",fo.ttCustom):"")+
@@ -1885,8 +1935,8 @@ function ppEdScr(){
       '<label>أجب عن عدد محدد من الأسئلة (0 = الكل)</label>'+stp("o.opt",o.opt,o.opt>0?o.opt+" أسئلة":"الكل")+
       ppInp("o.note","ملاحظة أعلى الأسئلة (مثل: الإجابة على الورقة نفسها)",o.note))+
     sec("c","الطباعة والترقيم (A4)",
-      ppChk("o.noTime","إخفاء الزمن من الورقة",o.noTime)+ppChk("o.showDate","إظهار التاريخ في الورقة",o.showDate)+
-      ppChk("o.noTotal","إخفاء الدرجة الكلية من الورقة",o.noTotal)+
+      
+      '<div class="mu" style="font-size:12px;margin:4px 0 8px">الزمن والتاريخ والدرجة الكلية: استعمل أيقونة العين بجانب كل حقل في «بيانات الورقة».</div>'+
       ppChk("o.name","سطر اسم الطالب والشعبة",o.name)+
       ppChk("o.bism","بسم الله الرحمن الرحيم",o.bism)+
       ppChk("o.border","إطار حول الصفحة",o.border)+
@@ -2131,7 +2181,7 @@ function bkEdScr(){
     '<button class="b s" onclick="saveCurrentDoc(\'b\',S.bk)">💾 حفظ</button>'+
     '<button class="b s" onclick="saveFileToUserDrive(S.bk.f.title,bookletPreviewH(),isWlangRtl(S.bk.o.wlang))">☁️ Drive</button>'+
     '<button class="b" onclick="window.print()">🖨️ A4</button>'+
-    '<button class="b s" onclick="S.bk=null;S.gw=null;draw()">رجوع</button></header>';
+    '<button class="b s" onclick="edBack()">رجوع</button></header>';
   var tabs='<div class="row noprint" style="margin-bottom:10px">'+
     '<button class="b '+(tb=="info"?'':'s')+' grow" onclick="S.bk.tab=\'info\';draw()">١. المعلومات والغلاف</button>'+
     '<button class="b '+(tb=="cont"?'':'s')+' grow" onclick="S.bk.tab=\'cont\';draw()">٢. الفصول والمحتوى</button>'+
