@@ -6,11 +6,11 @@
 <meta name="theme-color" content="#15803d">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="مسبار AI">
+<meta name="apple-mobile-web-app-title" content="مسبار المدرسة">
 <link rel="manifest" href="./manifest.json">
 <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
-<title>مسبار AI</title>
+<title>مسبار المدرسة</title>
 <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#f6f7fb;--sf:#fff;--tx:#14213d;--mu:#667085;--ln:#e4e7ee;--ac:#1d4ed8;--acs:#e3ebff;--gold:#c8962b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -147,6 +147,7 @@ body { background: #f0f2f5; }
 button.b { transition: all 0.2s ease; font-weight: 700; letter-spacing: 0.2px; }
 button.b:not(:disabled):active { transform: scale(0.96); }
 main { animation: fadeIn 0.4s ease-out; }
+#app.noanim main{animation:none}
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
 /* ===== v2.60: Elegant UI Refresh ===== */
@@ -281,7 +282,7 @@ function misbarStuck(){
 function misbarShowFail(){
   var a=document.getElementById("app");if(!a)return;
   var er=(window.__errs||[]).slice(-3).join(" | ").replace(/</g,"&lt;");
-  a.innerHTML='<div class="splash"><img src="./icon-192.png" alt="" class="sp-logo"><h1>مسبار AI</h1><p>تعذّر إكمال التهيئة.<br>تأكد من الإنترنت ثم أعد المحاولة.</p>'
+  a.innerHTML='<div class="splash"><img src="./icon-192.png" alt="" class="sp-logo"><h1>مسبار المدرسة</h1><p>تعذّر إكمال التهيئة.<br>تأكد من الإنترنت ثم أعد المحاولة.</p>'
     +'<button class="sp-btn" onclick="location.reload()">إعادة المحاولة</button>'
     +'<button class="sp-btn g" onclick="misbarHardReset()">مسح الذاكرة المؤقتة وإعادة التحميل</button>'
     +(er?'<p dir="ltr" style="font-size:11px;opacity:.6;max-width:90%;word-break:break-word;margin-top:12px">'+er+'</p>':'')+'</div>';
@@ -304,7 +305,7 @@ window.misbarHardReset=function(){
 };
 </script>
 <div id="app">
-  <div class="splash"><img src="./icon-192.png" alt="" class="sp-logo"><h1>مسبار AI</h1><p>جاري تهيئة الجلسة...</p><div class="sp-bar"><i></i></div></div>
+  <div class="splash"><img src="./icon-192.png" alt="" class="sp-logo"><h1>مسبار المدرسة</h1><p>جاري تهيئة الجلسة...</p><div class="sp-bar"><i></i></div></div>
 </div>
 <div id="toast"></div>
 
@@ -312,7 +313,7 @@ window.misbarHardReset=function(){
 /* ============================================================================
    [الأساس ١] رقم الإصدار ونظام التحديث التلقائي الفوري للزبائن (PWA Auto-Update)
    ============================================================================ */
-var APP_VERSION = "2.76.0";
+var APP_VERSION = "2.77.0";
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", function() {
@@ -337,7 +338,7 @@ async function checkForLiveUpdate() {
       if (Date.now() - lastReload < 5000) return; // الحماية من التحديث اللانهائي (Loop Protection)
       sessionStorage.setItem("misbar_last_reload", Date.now());
       
-      toast("🔄 جاري تحديث مسبار AI تلقائياً إلى الإصدار " + data.v + "...");
+      toast("🔄 جاري تحديث مسبار المدرسة تلقائياً إلى الإصدار " + data.v + "...");
       if ("caches" in window) {
         var keys = await caches.keys();
         await Promise.all(keys.map(function(k){ return caches.delete(k); }));
@@ -355,42 +356,62 @@ async function checkForLiveUpdate() {
 var _fromPopState = false;
 var _lastHistKey = "";
 function getNavStateKey(){
-  return [S.role||"", S.tab||0, S.curChatId||"", S.proPortal||"", S.scnDocId||"", S.profileOpen?1:0, S.subv?1:0, S.gw?S.gw.view:"", S.openMat?1:0, S.scnCam?1:0, S.scnEd?1:0, S.scnPrintDoc?1:0, S.pp?((S.pp.tab||"qs")+":"+(S.pp.view||"student")+":"+(S.pp.sheet?(S.pp.sheet.sub||"m"):"")):"", S.bk?(S.bk.tab||"info"):""].join("|");
+  return [S.role||"", S.tab||0, S.curChatId||"", S.proPortal||"", S.scnDocId||"", S.profileOpen?1:0, S.subv?1:0, S.gw?S.gw.view:"", S.openMat?1:0, S.scnCam?1:0, S.scnEd?1:0, S.scnPrintDoc?1:0, S.pp?((S.pp.tab||"qs")+":"+(S.pp.view||"student")+":"+(S.pp.sheet?(S.pp.sheet.sub||"m"):"")):"", S.bk?(S.bk.tab||"info"):"", S.quiz?1:0, S.stuActiveQuiz?1:0, S.clsGrp?1:0, S.aiSubTab||"ai", S.aiSubTab2||"omr", S.scnEd?(S.scnEd.step||"e"):""].join("|");
 }
-function navSt(k){
-  var st={k:k};
+function navSt(k,d){
+  var st={k:k,d:d||0,tb:S.tab||0,a1:S.aiSubTab||"ai",a2:S.aiSubTab2||"omr"};
   st.gv=S.gw?S.gw.view:"";
   if(S.pp){st.pt=S.pp.tab||"qs";if(st.pt==="form")st.pt="info";st.pv=S.pp.view||"student";st.ps=S.pp.sheet?(S.pp.sheet.sub||"m"):""}
   if(S.bk){st.bt=S.bk.tab||"info"}
   return st;
 }
+var _navStack=[],_skipPop=false;
 function syncHistoryState(){
   var k = getNavStateKey();
   if(_fromPopState){ _lastHistKey = k; return; }
   if(!_lastHistKey){
-    _lastHistKey = k;
-    try{ history.replaceState(navSt(k), ""); }catch(e){}
+    _lastHistKey = k; _navStack=[k];
+    try{ history.replaceState(navSt(k,0), ""); }catch(e){}
     return;
   }
   if(k !== _lastHistKey){
-    _lastHistKey = k;
-    try{ history.pushState(navSt(k), ""); }catch(e){}
+    var n=_navStack.length,hs=history.state;
+    /* المستخدم رجع بزر داخل التطبيق إلى الشاشة السابقة: نرجع خطوة في السجل بدل إضافة خطوة جديدة */
+    if(n>1&&_navStack[n-2]===k&&hs&&typeof hs.d==="number"&&hs.d>0){
+      _navStack.pop();_lastHistKey=k;_skipPop=true;setTimeout(function(){_skipPop=false},500);
+      try{history.back()}catch(e){_skipPop=false}
+      return;
+    }
+    _lastHistKey = k; _navStack.push(k);
+    try{ history.pushState(navSt(k,_navStack.length-1), ""); }catch(e){}
   }
 }
 window.addEventListener("popstate", function(e){
+  if(_skipPop){_skipPop=false;return}
+  var st=e.state||{};
+  if(typeof st.d==="number")_navStack.length=Math.max(1,Math.min(_navStack.length,st.d+1));
   _fromPopState = true;
+  var fin=function(){_fromPopState=false};
   var md = document.getElementById("md");
-  if(md){ md.remove(); S.chatModal = null; _fromPopState = false; syncHistoryState(); return; }
-  if(S.profileOpen){ S.profileOpen = false; draw(); _fromPopState = false; return; }
-  if(S.subv){ S.subv = 0; draw(); _fromPopState = false; return; }
-  if(S.curChatId !== null){ S.curChatId = null; draw(); _fromPopState = false; return; }
-  if(S.openMat !== null){ S.openMat = null; S.out = ""; S.quiz = null; draw(); _fromPopState = false; return; }
-  if(S.pp !== null || S.bk !== null || S.gw !== null){ edApplyNav(e.state); _fromPopState = false; return; }
-  if(S.proPortal !== null){ S.proPortal = null; draw(); _fromPopState = false; return; }
-  if(S.scnDocId !== null){ setOpenScnDoc(null); draw(); _fromPopState = false; return; }
-  if(S.role !== null && S.tab > 0){ S.tab = 0; draw(); _fromPopState = false; return; }
-  if(S.role !== null){ S.role = null; draw(); _fromPopState = false; return; }
-  _fromPopState = false;
+  if(md){ md.remove(); S.chatModal = null; fin(); syncHistoryState(); return; }
+  if(S.scnCam){ closeLiveScannerCam(); fin(); return; }
+  if(S.scnEd){ S.scnEd = null; draw(); fin(); return; }
+  if(S.scnPrintDoc){ S.scnPrintDoc = null; draw(); fin(); return; }
+  if(S.profileOpen){ S.profileOpen = false; draw(); fin(); return; }
+  if(S.subv){ S.subv = 0; draw(); fin(); return; }
+  if(S.curChatId !== null){ S.curChatId = null; draw(); fin(); return; }
+  if(S.stuActiveQuiz){ S.stuActiveQuiz = null; draw(); fin(); return; }
+  if(S.quiz){ S.quiz = null; draw(); fin(); return; }
+  if(S.clsGrp){ S.clsGrp = null; draw(); fin(); return; }
+  if(S.openMat !== null){ S.openMat = null; S.out = ""; S.quiz = null; draw(); fin(); return; }
+  if(S.pp !== null || S.bk !== null || S.gw !== null){ edApplyNav(e.state); fin(); return; }
+  if(S.proPortal !== null){ S.proPortal = null; draw(); fin(); return; }
+  if(S.scnDocId !== null){ setOpenScnDoc(null); draw(); fin(); return; }
+  if(S.aiSubTab2 && S.aiSubTab2 !== "omr" && (st.a2||"omr") !== S.aiSubTab2){ S.aiSubTab2 = st.a2||"omr"; S.out=""; draw(); fin(); return; }
+  if(S.aiSubTab && S.aiSubTab !== "ai" && (st.a1||"ai") !== S.aiSubTab){ S.aiSubTab = st.a1||"ai"; S.out=""; draw(); fin(); return; }
+  if(S.role !== null && S.tab > 0){ S.tab = (typeof st.tb==="number"&&st.tb<S.tab)?st.tb:0; draw(); fin(); return; }
+  if(S.role !== null){ S.role = null; draw(); fin(); return; }
+  fin();
 });
 
 
@@ -433,7 +454,7 @@ var S={
   classes:[{n:"الأحياء - الصف الخامس",c:"AB12",mats:[{title:"مقدمة في الخلية الحية",text:"الخلية هي الوحدة الأساسية التركيبية والوظيفية في جميع الكائنات الحية. تقسم الخلايا إلى بدائية النواة وحقيقية النواة، وتحتوي حقيقية النواة على عضيات محاطة بأغشية مثل النواة والميتوكوندريا."}]}],
   joined:["AB12"],openMat:null,out:"",
   quiz:null,quizAns:{},quizDone:false,
-  posts:[{author:"إدارة مسبار",text:"مرحباً بكم في منصة مسبار AI التعليمية للأساتذة والطلاب."}],
+  posts:[{author:"إدارة مسبار",text:"مرحباً بكم في منصة مسبار المدرسة التعليمية للأساتذة والطلاب."}],
   feedbacks:[],
   tx:"",pend:"",gr:[["زينب أحمد",18],["مصطفى كريم",15]],
   bank:[],bi:"",bt:"",ai:[],free:3,prov:"Gemini",aiSubTab:"ai",
@@ -1211,7 +1232,7 @@ function gwHomeV(){
 }
 function shareApp(){
   var u=location.href;
-  if(navigator.share)navigator.share({title:"مسبار AI",text:"أوراق الأسئلة والملازم الجاهزة للطباعة A4",url:u}).catch(function(){});
+  if(navigator.share)navigator.share({title:"مسبار المدرسة",text:"أوراق الأسئلة والملازم الجاهزة للطباعة A4",url:u}).catch(function(){});
   else if(navigator.clipboard){navigator.clipboard.writeText(u);toast("تم نسخ رابط التطبيق")}
   else toast(u);
 }
@@ -1302,7 +1323,7 @@ function startEditor(sample){
 
 
 /* ===== v2.74: شكل الدرجة + إظهار/إخفاء الدرجة والتاريخ ===== */
-var MF_LIST=[["d","(10 درجات)"],["n","(10)"],["l","(الدرجة: 10)"],["w","(10 درجة)"],["of","(.... من 10)"],["c","نص مخصص"]];
+var MF_LIST=[["d","تلقائي حسب اللغة"],["n","(10)"],["of","(.... من 10)"],["ar_d","عربي: (10 درجات)"],["ar_l","عربي: (الدرجة: 10)"],["ar_w","عربي: (10 درجة)"],["en_d","English: (10 marks)"],["en_l","English: (Mark: 10)"],["en_s","English: (Score: 10)"],["en_of","English: (.... / 10)"],["c","✏️ نص مخصص"]];
 function ppMarkTxt(q,o,rtl,dg){
   if(!q||!q.m||q.hm||o.noQM)return "";
   var m=dg(esc(q.m)),f=q.mf||o.mf||"d",t;
@@ -1310,6 +1331,13 @@ function ppMarkTxt(q,o,rtl,dg){
   else if(f==="l")t=(rtl?"الدرجة: ":"Mark: ")+m;
   else if(f==="w")t=m+(rtl?" درجة":" mark");
   else if(f==="of")t="......... "+(rtl?"من ":"/ ")+m;
+  else if(f==="ar_d")t=m+" درجات";
+  else if(f==="ar_l")t="الدرجة: "+m;
+  else if(f==="ar_w")t=m+" درجة";
+  else if(f==="en_d")t=m+" marks";
+  else if(f==="en_l")t="Mark: "+m;
+  else if(f==="en_s")t="Score: "+m;
+  else if(f==="en_of")t="......... / "+m;
   else if(f==="c"){var c=String(q.mc||o.mc||"");t=c?dg(esc(c)).replace(/\{m\}/g,m):m+(rtl?" درجات":" marks")}
   else t=m+(rtl?" درجات":" marks");
   return " ("+t+")";
@@ -1322,6 +1350,8 @@ function ppInpEye(path,label,val,type,flag,shown,inv){
 }
 var HL_LIST=[["solid","مستمر"],["double","مزدوج"],["dashed","متقطع"],["dotted","نقاط"],["thick","عريض"]];
 function hlChips(o){return HL_LIST.map(function(x){return '<button type="button" class="chip'+((o.hls||"solid")===x[0]?' on':'')+'" onclick="psd(\'o.hls\',\''+x[0]+'\')">'+x[1]+'</button>'}).join("")}
+function ppRoundYearH(f,o,dg,tdg){var a=[];if(!o.noRound&&f.round)a.push(tdg(f.round));if(!o.noYear&&f.year)a.push(dg(esc(f.year)));return a.length?'<br>'+a.join(' · '):''}
+function ppEyeLbl(label,flag,shown){return '<label style="display:flex;align-items:center;gap:6px">'+label+'<button type="button" class="ed-ib" style="width:30px;height:30px;margin-inline-start:auto'+(shown?'':';opacity:.55')+'" onclick="psd(\''+flag+'\','+(shown?'true':'false')+')" aria-label="إظهار أو إخفاء في الورقة">'+mIc(shown?"eye":"eyeoff",18)+'</button><small class="mu" style="font-weight:400">'+(shown?'ظاهر':'مخفي')+'</small></label>'}
 function psd(path,v){var y=window.scrollY;ps(path,v);draw();window.scrollTo(0,y)}
 function pqs(i,k,v){edMark(true);S.pp.q[i][k]=v;edAuto();updSheet();edRenderSheet()}
 function edMfAll(f){var y=window.scrollY,p=S.pp;edMark(true);p.o.mf=f;p.q.forEach(function(q){q.mf=""});edAuto();draw();window.scrollTo(0,y)}
@@ -1459,7 +1489,7 @@ function paperH(){
     h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:6px 0">'+
       '<div style="flex:1;font-size:.9em">'+tdg(f.ministry)+(f.school?'<br><b>'+tdg(f.school)+'</b>':'')+'</div>'+
       '<div style="text-align:center">'+(o.logo?'<img src="'+o.logo+'" alt="" style="max-height:66px">':'')+'</div>'+
-      '<div style="flex:1;text-align:end"><b style="color:'+c+';font-size:1.05em">'+tdg(f.title)+'</b><div style="font-size:.9em">'+tdg(subjShow(f,typeof o!=="undefined"?o:null))+(f.stage?' — '+tdg(f.stage):'')+'<br>'+tdg(f.round)+(f.year?' · '+dg(esc(f.year)):'')+'</div></div>'+
+      '<div style="flex:1;text-align:end"><b style="color:'+c+';font-size:1.05em">'+tdg(f.title)+'</b><div style="font-size:.9em">'+tdg(subjShow(f,typeof o!=="undefined"?o:null))+(f.stage?' — '+tdg(f.stage):'')+ppRoundYearH(f,o,dg,tdg)+'</div></div>'+
     '</div>';
   } else {
     var taCss = hAl === "right" ? "right" : (hAl === "left" ? "left" : "center");
@@ -1467,7 +1497,7 @@ function paperH(){
     if(o.logo) h+='<div style="margin-bottom:6px"><img src="'+o.logo+'" alt="" style="max-height:66px"></div>';
     h+='<div style="font-size:.9em;margin-bottom:4px">'+tdg(f.ministry)+(f.school?'<br><b>'+tdg(f.school)+'</b>':'')+'</div>';
     h+='<div style="margin-bottom:4px"><b style="color:'+c+';font-size:1.05em">'+tdg(f.title)+'</b></div>';
-    h+='<div style="font-size:.9em">'+tdg(subjShow(f,typeof o!=="undefined"?o:null))+(f.stage?' — '+tdg(f.stage):'')+'<br>'+tdg(f.round)+(f.year?' · '+dg(esc(f.year)):'')+'</div>';
+    h+='<div style="font-size:.9em">'+tdg(subjShow(f,typeof o!=="undefined"?o:null))+(f.stage?' — '+tdg(f.stage):'')+ppRoundYearH(f,o,dg,tdg)+'</div>';
     h+='</div>';
   }
   if(!(o.noTime&&o.noTotal&&!o.showDate))h+='<div style="display:flex;justify-content:space-between;border-top:1.5px solid '+c+';border-bottom:1.5px solid '+c+';padding:3px 8px;margin:6px 0;font-weight:600">'+
@@ -1925,7 +1955,7 @@ function ppEdScr(){
       ppInp("f.ministry","المديرية / الوزارة",fo.ministry)+
       ppInp("f.title","عنوان الامتحان (شهري / نصف السنة / نهائي / مخصص)",fo.title)+
       ppInp("f.stage","المرحلة والصف",fo.stage)+
-      '<div class="grid">'+ppSel("f.round","الكورس أو الدور",["الكورس الأول","الكورس الثاني","الدور الأول","الدور الثاني","First Course","Second Course"],fo.round)+ppInp("f.year","السنة الدراسية",fo.year)+'</div>'+
+      '<div class="grid">'+'<div>'+ppEyeLbl("الكورس أو الدور","o.noRound",!o.noRound)+'<select style="'+(o.noRound?"opacity:.5":"")+'" onchange="ps(\'f.round\',this.value)">'+["الكورس الأول","الكورس الثاني","الدور الأول","الدور الثاني","First Course","Second Course"].map(function(x){return opt1(x,fo.round)}).join("")+'</select></div><div>'+ppEyeLbl("السنة الدراسية","o.noYear",!o.noYear)+'<input value="'+esc(fo.year)+'" style="'+(o.noYear?"opacity:.5":"")+'" oninput="ps(\'f.year\',this.value)"></div></div>'+
       '<div class="grid">'+'<div><div>'+ppInpEye("f.dur","المدة (الزمن)",fo.dur,"","o.noTime",!o.noTime,false)+'</div></div><div><div>'+ppInpEye("f.grade","الدرجة الكلية",fo.grade,"number","o.noTotal",!o.noTotal,false)+'</div></div></div>'+ppInpEye("f.date","التاريخ (فارغ = تاريخ اليوم)",fo.date||"","date","o.showDate",!!o.showDate,true)+
       ppInp("f.teacher","اسم المعلم / المدرس",fo.teacher)+
       '<label>صفة المعلم في الورقة</label><div class="row" style="flex-wrap:wrap;margin-bottom:8px">'+["مدرس المادة","مدرسة المادة","معلم","معلمة","Subject Teacher","مسمى مخصص"].map(function(x){return '<button type="button" class="chip '+(fo.tt==x?"on":"")+'" onclick="ps(\'f.tt\',\''+x+'\')">'+x+'</button>'}).join("")+'</div>'+
@@ -4181,7 +4211,7 @@ function exportGradesWord(){
   var rows = S.gr.map(function(g){
     return '<tr><td style="padding:8px">'+esc(g[0])+'</td><td style="padding:8px;text-align:center">'+esc(g[1])+'</td></tr>';
   }).join('');
-  var tbl = '<h2 style="text-align:center">سجل الدرجات - مسبار AI</h2><table border="1" style="width:100%;border-collapse:collapse"><tr><th>اسم الطالب</th><th>الدرجة</th></tr>' + rows + '</table>';
+  var tbl = '<h2 style="text-align:center">سجل الدرجات - مسبار المدرسة</h2><table border="1" style="width:100%;border-collapse:collapse"><tr><th>اسم الطالب</th><th>الدرجة</th></tr>' + rows + '</table>';
   downloadWordFile('دفتر_الدرجات', tbl, true);
 }
 function grV(){
@@ -4850,7 +4880,7 @@ function handleIncomingCall(callId, d){
   CallTones.ring();
   try{
     if(document.hidden && window.Notification && Notification.permission === 'granted'){
-      new Notification('مسبار AI', { body: (d.callerName || 'مكالمة واردة') + ' يتصل بك' });
+      new Notification('مسبار المدرسة', { body: (d.callerName || 'مكالمة واردة') + ' يتصل بك' });
     }
   }catch(e){}
   window.fbUpdateDoc(ref, { status: 'ringing' }).catch(function(){});
@@ -5162,7 +5192,7 @@ var AI_PROVS = {
   ChatGPT: { ico: "🟢", sub: "OpenAI", k: "o", hint: "sk-...", link: "https://platform.openai.com/api-keys", models: ["gpt-5-mini", "gpt-4o-mini"] },
   Claude:  { ico: "🟠", sub: "Anthropic", k: "a", hint: "sk-ant-...", link: "https://console.anthropic.com/settings/keys", models: ["claude-haiku-5-5", "claude-sonnet-5-5"] }
 };
-var AI_SYS = "أنت مسبار AI، مساعد تعليمي وأكاديمي ذكي للأساتذة والطلاب. أجب بوضوح ودقة وباللغة التي يُسأل بها.";
+var AI_SYS = "أنت مسبار المدرسة، مساعد تعليمي وأكاديمي ذكي للأساتذة والطلاب. أجب بوضوح ودقة وباللغة التي يُسأل بها.";
 
 function provKey(p){
   if(p === "Gemini") return getUserKey();
@@ -6563,7 +6593,7 @@ function stdCode(name,pre){var kp=keyParts();if(!kp)return "";var s=kp.sec+"|std
 function rosterDocId(){var kp=keyParts();if(!kp)return "x";var a=cyr(kp.sec+"|roster",5),b=cyr(kp.sec+"|roster",9);return kp.id+"_"+a[0].toString(36)+a[1].toString(36)+b[0].toString(36)+b[1].toString(36)}
 function waNum(v){var d=String(v||"").replace(/\D/g,"");if(d.length<7)return "";d=d.replace(/^00/,"");if(d.indexOf("964")===0)return d;return "964"+d.replace(/^0+/,"")}
 function sendCodeWA(c){var x=(S.rsPub||[]).filter(function(y){return y.c===c})[0],ph=(S.rsPh||{})[c],ins=(S.myInsts||[]).filter(function(i){return i.id===S.curInstId})[0];if(!x||!ph)return;
-  var m="السلام عليكم ورحمة الله،\nتم تسجيل الطالب/ة *"+x.n+"* رسمياً في «"+(ins?ins.name:"المؤسسة")+"».\n🔑 كود متابعة ولي الأمر: *"+x.p+"*\nأدخله في بوابة أولياء الأمور بتطبيق مسبار AI لمتابعة الدرجات والغيابات:\n"+location.origin+location.pathname;
+  var m="السلام عليكم ورحمة الله،\nتم تسجيل الطالب/ة *"+x.n+"* رسمياً في «"+(ins?ins.name:"المؤسسة")+"».\n🔑 كود متابعة ولي الأمر: *"+x.p+"*\nأدخله في بوابة أولياء الأمور بتطبيق مسبار المدرسة لمتابعة الدرجات والغيابات:\n"+location.origin+location.pathname;
   window.open("https://wa.me/"+ph+"?text="+encodeURIComponent(m),"_blank")}
 function rsDel(c){var x=(S.rsPub||[]).filter(function(y){return y.c===c})[0],ins=(S.myInsts||[]).filter(function(i){return i.id===S.curInstId})[0];if(!x||!ins)return;
   ask("للتأكيد اكتب: حذف — سيُحذف «"+x.n+"» وتتعطل أكواده",function(v){if(v!=="حذف")return;
@@ -6993,7 +7023,7 @@ function leavePortal(){S.sysRole=null;S.loginRole=null;S.role=null;try{localStor
 function portalLoginV(p){
   $("app").className="";
   var n={pro:"الأستاذ",stu:"الطالب",parent:"أولياء الأمور",admin:"المدير / رئيس القسم"}[p]||"";
-  $("app").innerHTML='<div class="lgfull"><div class="hero"><button class="hat" aria-label="مسبار" onclick="hat()">🎓</button><h1>مسبار AI</h1><p class="mu">بوابة '+n+'</p></div><main>'+
+  $("app").innerHTML='<div class="lgfull"><div class="hero"><button class="hat" aria-label="مسبار" onclick="hat()">🎓</button><h1>مسبار المدرسة</h1><p class="mu">بوابة '+n+'</p></div><main>'+
     (inAppBrowser()?'<div class="card" style="border-inline-start:4px solid #f59e0b;line-height:1.8"><b>⚠️ افتح الرابط في المتصفح</b><br>Google لا يسمح بتسجيل الدخول من داخل تلغرام أو واتساب أو إنستغرام. انسخ الرابط وافتحه في Chrome أو Safari.<button class="b s" style="width:100%;margin-top:8px" onclick="copyAppLink()">📋 نسخ رابط التطبيق</button></div>':'')+
     '<div class="card"><div class="mu" style="line-height:1.8;margin-bottom:10px">'+((p==="pro"||p==="stu")?'سجّل الدخول بحساب <b>Gmail</b> (…@gmail.com). ستُحفظ ملفاتك في <b>Google Drive الخاص بك</b>، وسيطلب منك Google السماح بذلك مرة واحدة فقط. حسابات الجامعة غير مدعومة حالياً.':'سجّل الدخول بحساب Google الخاص ببوابة <b>'+n+'</b>. تقدر تستعمل حساباً مختلفاً لكل بوابة على نفس الجهاز.')+'</div><button class="b" style="width:100%;min-height:64px;font-size:18px" onclick="fbLogin()">🔐 تسجيل الدخول بحساب Google</button></div>'+
     '<button class="b s" style="width:100%;margin-top:10px" onclick="leavePortal()">↩ رجوع لاختيار البوابة</button></main></div>';
@@ -7009,7 +7039,7 @@ function loginV(){
     ["stu","p4","الطالب","الكلاسات والاختبارات والمراجعة",svg('<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M19 17v4H6"/>')],
     ["parent","p2","أولياء الأمور","الدرجات والغيابات والتبليغات بكود الطالب",svg('<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.3"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><path d="M15 15c3-.6 6 1 6 4.5"/>')]
   ].filter(function(c){return c[0]==="pro"||c[0]==="stu"});
-  $("app").innerHTML='<div class="hero"><button class="hat" aria-label="مسبار" onclick="hat()">🎓</button><h1>مسبار AI</h1><p class="mu">المنظومة التعليمية المتكاملة</p></div><main>'+
+  $("app").innerHTML='<div class="hero"><button class="hat" aria-label="مسبار" onclick="hat()">🎓</button><h1>مسبار المدرسة</h1><p class="mu">المنظومة التعليمية المتكاملة</p></div><main>'+
   '<h2 style="text-align:center;margin-top:0">اختر بوابتك</h2>'+
   cards.map(function(c){return '<div class="portal '+c[1]+'" role="button" tabindex="0" onclick="pickPortal(\''+c[0]+'\')"><div class="ic">'+c[4]+'</div><div><b>'+c[2]+'</b><span>'+c[3]+'</span>'+((S.portalUsers||{})[PORTAL_APP[c[0]]]?'<span dir="auto" style="display:block;font-weight:700;margin-top:4px;font-size:12px">✅ مسجّل: '+esc(S.portalUsers[PORTAL_APP[c[0]]])+'</span>':'')+'</div></div>'}).join("")+
   '<div class="mu" style="text-align:center;margin-top:14px;font-size:11px">v'+APP_VERSION+' · تحديث تلقائي</div></main>';
@@ -7039,7 +7069,7 @@ function restoreAppStateFromSession(){
   }catch(e){}
 }
 
-function draw(){
+function _draw(){
   saveAppStateToSession();
   var _eh=document.getElementById("edHost");if(_eh&&!(S.pp&&S.pp.sheet&&S.gw&&S.gw.view=="ed_q"))_eh.remove();
 
@@ -7112,6 +7142,17 @@ function draw(){
 }
 
 
+/* ===== v2.77: منع الوميض: لا حركة دخول عند إعادة رسم نفس الشاشة + دمج الرسمات المتتالية القادمة من Firebase ===== */
+var _lastDrawSig="",_dsT=0;
+function draw(){
+  clearTimeout(_dsT);_dsT=0;
+  var sig=getNavStateKey()+"|"+S.sysRole+"|"+(S.uid?1:0)+"|"+(S.authReady?1:0);
+  var same=sig===_lastDrawSig;_lastDrawSig=sig;
+  _draw();
+  var a=$("app");if(a){if(same)a.classList.add("noanim");else a.classList.remove("noanim")}
+}
+function drawSoon(){clearTimeout(_dsT);_dsT=setTimeout(function(){_dsT=0;draw()},90)}
+
 /* ==================== الدليل البصري الذكي لمستخدمي الآيفون (iOS PWA Prompt) ==================== */
 function checkIOSInstallPrompt(){
   var isIos = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
@@ -7150,7 +7191,7 @@ for(var _v of ["13.2.0","12.18.0"]){
 }
 if(!FB){throw new Error("Firebase SDK failed to load")}
 var {initializeApp}=FB[0];
-var {getAuth,GoogleAuthProvider,signInWithPopup,signInWithRedirect,getRedirectResult,reauthenticateWithPopup,onAuthStateChanged,signOut}=FB[1];
+var {getAuth,GoogleAuthProvider,signInWithPopup,signInWithRedirect,getRedirectResult,reauthenticateWithPopup,onAuthStateChanged,signOut,setPersistence,indexedDBLocalPersistence,browserLocalPersistence}=FB[1];
 var {getFirestore,initializeFirestore,doc,setDoc,getDoc,updateDoc,deleteDoc,collection,onSnapshot,query,where,runTransaction,arrayUnion}=FB[2];
 
 var OWNER="alisalmankareem2@gmail.com";
@@ -7166,6 +7207,8 @@ var CFG={
 /* v2.58: لكل بوابة حساب Google مستقل على نفس الجهاز (بوابة الأستاذ/الطالب على التطبيق الأساسي كي لا تضيع جلسات الزبائن الحالية) */
 var PORTALS=["pro_stu","parent","admin"],APPS={},AUTHS={},DBS={};
 PORTALS.forEach(function(p){var a=p==="pro_stu"?initializeApp(CFG):initializeApp(CFG,p);APPS[p]=a;AUTHS[p]=getAuth(a);DBS[p]=initializeFirestore(a,{experimentalAutoDetectLongPolling:true})});
+/* الدخول يبقى محفوظاً حتى يضغط المستخدم «خروج» */
+PORTALS.forEach(function(p){try{setPersistence(AUTHS[p],indexedDBLocalPersistence).catch(function(){try{setPersistence(AUTHS[p],browserLocalPersistence).catch(function(){})}catch(e){}})}catch(e){}});
 var curPortal="pro_stu",app=APPS.pro_stu,auth=AUTHS.pro_stu,db=DBS.pro_stu,unsubs=[],remotePlans=[];
 var fail=function(e){toast(e&&e.code=="permission-denied"?"لا تملك الصلاحية":"خطأ: "+((e&&e.code)||e))};
 var err=function(e){console.warn(e&&e.code?e.code:e)};
@@ -7222,7 +7265,7 @@ window.fbStartLiveQuiz = function(pin, data){
            var ansData = doc.data();
            S.liveQuizAnswers[doc.id] = ansData;
         });
-        if(S.proPortal === 'live' && S.liveQuizTab === 'quiz') draw();
+        if(S.proPortal === 'live' && S.liveQuizTab === 'quiz') drawSoon();
      }));
      S.liveQuizUnsub = unsubs[unsubsIdx];
   });
@@ -7279,9 +7322,9 @@ window.fbPutCardItemId=function(code,id,item){return setDoc(doc(collection(db,"p
 window.fbCardItemExists=function(code,id){return getDoc(doc(collection(db,"parent_cards",code,"items"),id)).then(function(x){return x.exists()})};
 window.fbSendReport=function(inst,rep){return setDoc(doc(collection(db,"inst",inst,"reports"),Date.now()+"_"+(S.uid||"anon")),rep)};
 window.fbCreateInst=function(id,d){return setDoc(doc(db,"inst",id),d)};
-window.fbWatchMyInsts=function(){if(_wi)_wi();_wi=onSnapshot(query(collection(db,"inst"),where("adminUid","==",S.uid)),function(s){var a=[];s.forEach(function(d){var x=d.data();x.id=d.id;a.push(x)});S.myInsts=a;if(S.sysRole==="admin")draw()},function(e){toast("تعذر قراءة المؤسسات: "+e.message)})};
-window.fbWatchInstReports=function(id){if(_wr)_wr();_wr=onSnapshot(collection(db,"inst",id,"reports"),function(s){var r=[];s.forEach(function(d){r.push(d.data())});S.adminReports=r.sort(function(a,b){return (b.at||0)-(a.at||0)});if(S.sysRole==="admin")draw()},function(e){toast("تعذر قراءة التقارير: "+e.message)})};
-window.fbWatchCard=function(code){if(_wc)_wc();_wc=onSnapshot(collection(db,"parent_cards",code,"items"),function(s){var r=[];s.forEach(function(d){r.push(d.data())});S.cardItems=r.sort(function(a,b){return (b.at||0)-(a.at||0)});if(S.sysRole==="parent")draw()},function(e){S.cardItems=[];toast("تعذر القراءة: "+e.message)})};
+window.fbWatchMyInsts=function(){if(_wi)_wi();_wi=onSnapshot(query(collection(db,"inst"),where("adminUid","==",S.uid)),function(s){var a=[];s.forEach(function(d){var x=d.data();x.id=d.id;a.push(x)});S.myInsts=a;if(S.sysRole==="admin")drawSoon()},function(e){toast("تعذر قراءة المؤسسات: "+e.message)})};
+window.fbWatchInstReports=function(id){if(_wr)_wr();_wr=onSnapshot(collection(db,"inst",id,"reports"),function(s){var r=[];s.forEach(function(d){r.push(d.data())});S.adminReports=r.sort(function(a,b){return (b.at||0)-(a.at||0)});if(S.sysRole==="admin")drawSoon()},function(e){toast("تعذر قراءة التقارير: "+e.message)})};
+window.fbWatchCard=function(code){if(_wc)_wc();_wc=onSnapshot(collection(db,"parent_cards",code,"items"),function(s){var r=[];s.forEach(function(d){r.push(d.data())});S.cardItems=r.sort(function(a,b){return (b.at||0)-(a.at||0)});if(S.sysRole==="parent")drawSoon()},function(e){S.cardItems=[];toast("تعذر القراءة: "+e.message)})};
 
 window.fbPubRoster=function(inst,list,auto,phones){var t=Date.now(),rid=window.rosterDocId();return Promise.all(list.map(function(x){return Promise.all([setDoc(doc(db,"student_codes",x.c),{inst:inst,n:x.n,g:x.g||"",p:x.p||"",sec:x.sec?1:0,at:t},{merge:true}),setDoc(doc(db,"student_names",nameDocId(inst,x.n)),{inst:inst,n:x.n,g:x.g||"",c:x.c,p:x.p||"",at:t})])})).then(function(){return setDoc(doc(db,"rosters",rid),{inst:inst,list:list,auto:auto,at:t})}).then(function(){return updateDoc(doc(db,"inst",inst),{auto:auto,rosterN:list.length,rosterAt:t})}).then(function(){return Object.keys(phones||{}).length?setDoc(doc(db,"inst",inst,"private","phones"),{m:phones},{merge:true}):0})};
 window.fbWatchRoster=function(inst,cb){var u=onSnapshot(doc(db,"rosters",window.rosterDocId()),function(s){cb(s.exists()?(s.data().list||[]):[],null,s.exists()?s.data():{})},function(e){cb(null,e)});unsubs.push(u);return u};
@@ -7299,10 +7342,10 @@ window.fbRegTeacher=function(extra){var kp=keyParts();if(!S.uid||!kp)return Prom
 window.fbUnregTeacher=function(inst){if(!S.uid)return Promise.resolve();return deleteDoc(doc(db,"inst",inst,"teachers",S.uid)).catch(err)};
 window.fbRemoveTeacher=function(inst,uid){return deleteDoc(doc(db,"inst",inst,"teachers",uid))};
 var _wt=null;
-window.fbWatchInstTeachers=function(id){if(_wt)_wt();_wt=onSnapshot(collection(db,"inst",id,"teachers"),function(s){var r=[];s.forEach(function(d){var x=d.data();x.id=d.id;r.push(x)});S.instTeachers=r.sort(function(a,b){return (b.at||0)-(a.at||0)});if(S.sysRole==="admin")draw()},function(e){S.instTeachers=[]})};
+window.fbWatchInstTeachers=function(id){if(_wt)_wt();_wt=onSnapshot(collection(db,"inst",id,"teachers"),function(s){var r=[];s.forEach(function(d){var x=d.data();x.id=d.id;r.push(x)});S.instTeachers=r.sort(function(a,b){return (b.at||0)-(a.at||0)});if(S.sysRole==="admin")drawSoon()},function(e){S.instTeachers=[]})};
 /* ===== v2.65: فئات + اعتماد أساتذة + واجبات + ردود + متابعة ===== */
 var _wg=null,_wtd=null,_wh=null,_wtr=null,_wir=null,_chU=[];
-var _rd=function(){if(S.authReady)draw()};
+var _rd=function(){if(S.authReady)drawSoon()};
 window.fbWatchGroups=function(inst){if(_wg)_wg();_wg=onSnapshot(collection(db,"inst",inst,"groups"),function(s){var r=[];s.forEach(function(d){var x=d.data();x.id=d.id;r.push(x)});S.instGroups=r.sort(function(a,b){return (a.at||0)-(b.at||0)});_rd()},function(){S.instGroups=[]})};
 window.fbSaveGroup=function(inst,id,d){var ref=id?doc(db,"inst",inst,"groups",id):doc(collection(db,"inst",inst,"groups"));return setDoc(ref,d,{merge:true})};
 window.fbDelGroup=function(inst,id){return deleteDoc(doc(db,"inst",inst,"groups",id))};
@@ -7416,7 +7459,7 @@ window.fbConnectDrive=function(cb){
   reauthenticateWithPopup(auth.currentUser,p).then(function(res){
     captureDriveToken(res);
     toast("✅ تم ربط Google Drive بحسابك");
-    draw();
+    drawSoon();
     if(cb)cb();
   }).catch(function(e){
     if(e.code!="auth/popup-closed-by-user")toast("تعذر ربط Drive: "+e.code);
@@ -7436,8 +7479,8 @@ window.fbLogout=function(){
   S.username="";S.customName="";S.profLoaded=false;S.profileOpen=false;S._cr=null;S.foundUsers=[];
   signOut(auth).then(function(){
     try{if(oldUid)sessionStorage.removeItem("misbar_dtoken_"+oldUid)}catch(e){}
-    toast("تم تسجيل الخروج بنجاح");draw();
-  }).catch(function(){draw()});
+    toast("تم تسجيل الخروج بنجاح");drawSoon();
+  }).catch(function(){drawSoon()});
 };
 
 function onAuth(u){
@@ -7450,13 +7493,13 @@ function onAuth(u){
     S.subv=0;S.tab=0;S.openMat=null;S.uid=null;S.email="";S.role=null;S.isOwner=false;S.userAiKey="";
     S.driveToken="";S.driveFolderId="";S.driveFileId="";
     S.gw=null;S.pp=null;S.bk=null;
-    draw();return;
+    drawSoon();return;
   }
   if((S.sysRole==="pro"||S.sysRole==="stu")&&!gmailOk(u.email)&&(u.email||"").toLowerCase()!==OWNER.toLowerCase()){
     toast("هذه البوابة تدعم حسابات Gmail فقط (…@gmail.com). حسابات الجامعة غير مدعومة حالياً.");
     S.driveToken="";S.uid=null;S.email="";
     signOut(auth).catch(function(){});
-    draw();return;
+    drawSoon();return;
   }
   S.uid=u.uid;S.email=(u.email||"").toLowerCase();S.dispName=u.displayName||"";
   S.isOwner=S.email==OWNER.toLowerCase()&&u.emailVerified;
@@ -7464,7 +7507,7 @@ function onAuth(u){
 
   loadUserDeviceData();
   restoreAppStateFromSession();
-  draw();
+  drawSoon();
   getDoc(doc(db,"users",u.uid)).then(function(uSnap){
     if(uSnap.exists()){
       var ud=uSnap.data();
@@ -7484,7 +7527,7 @@ function onAuth(u){
         S.userAiKey=ud.userAiKey;
         try{localStorage.setItem("misbar_gkey_"+u.uid,ud.userAiKey)}catch(e){}
       }
-      draw();
+      drawSoon();
     }
     S.profLoaded=true;
     window.fbSyncUserProfile();
@@ -7503,16 +7546,16 @@ function onAuth(u){
     a.sort(function(x,y){return (x.o||0)-(y.o||0)});
     if(!s.empty||!S.isOwner)S.plans=a;
     if(s.empty&&S.isOwner&&!S.seeded){S.seeded=1;setTimeout(function(){window.savePlans()},600)}
-    draw();
+    drawSoon();
   },err));
 
   unsubs.push(onSnapshot(doc(db, "config", "app"), function(s){
-    if(s.exists()){ var d = s.data(); if(typeof d.freeLimit === "number"){ S.free = d.freeLimit; } if(d.pay){ S.pay = d.pay; try{localStorage.setItem("misbar_pay",JSON.stringify(d.pay))}catch(e){} } draw(); }
+    if(s.exists()){ var d = s.data(); if(typeof d.freeLimit === "number"){ S.free = d.freeLimit; } if(d.pay){ S.pay = d.pay; try{localStorage.setItem("misbar_pay",JSON.stringify(d.pay))}catch(e){} } drawSoon(); }
   }, err));
 
   if(S.isOwner){
     unsubs.push(onSnapshot(collection(db,"users"),function(s){
-      var a=[];s.forEach(function(d){a.push(d.data())});S.allUsers=a;S.usersErr="";draw();
+      var a=[];s.forEach(function(d){a.push(d.data())});S.allUsers=a;S.usersErr="";drawSoon();
     },function(e){S.usersErr=(e&&e.code)||"err"}));
   }
 
@@ -7558,7 +7601,7 @@ function onAuth(u){
              if(window.fbUpdateChatFields) window.fbUpdateChatFields(chatId, { readBy: room.readBy });
            }
         }
-        draw();
+        drawSoon();
         setTimeout(function(){ var wb=$("waBody"); if(wb) wb.scrollTop=wb.scrollHeight; }, 30);
       }
     },function(e){ watchedChatId=null; chatFail(e); });
@@ -7601,7 +7644,7 @@ function onAuth(u){
         }
         
         toast("💬 "+senderTitle+": "+prevTxt);
-        showBrowserNotification("مسبار AI - " + senderTitle, prevTxt);
+        showBrowserNotification("مسبار المدرسة - " + senderTitle, prevTxt);
       });
     }
     chatsFirst=false;
@@ -7613,7 +7656,7 @@ function onAuth(u){
     var localOnly=S.cv.filter(function(c){ return c.id && c.id!=="local_notes" && !ids[c.id]; });
     localOnly.forEach(function(c){ if(c.members && c.members.indexOf(S.email)>-1 && window.fbSaveChatRoom) window.fbSaveChatRoom(c); });
     S.cv=notes.concat(remote,localOnly);
-    draw();
+    drawSoon();
   },function(e){ chatFail(e); }));
 
   
@@ -7650,7 +7693,7 @@ window.fbDeleteRoomMessage=function(chatId, msgId){
     window.fbSaveChatRoom(chatObj).then(function(){
       return setDoc(doc(db,"chats",chatObj.id,"messages",msgObj.id),clean);
     }).catch(function(e){
-      msgObj._fail=true;draw();chatFail(e);
+      msgObj._fail=true;drawSoon();chatFail(e);
     });
   };
   window.fbSendFeedback=function(item){
@@ -7663,7 +7706,7 @@ window.fbDeleteRoomMessage=function(chatId, msgId){
     var a=[];s.forEach(function(d){a.push(d.data())});
     if(a.length){
       a.sort(function(x,y){return (y.at||0)-(x.at||0)});
-      S.posts=a;draw();
+      S.posts=a;drawSoon();
     }
   },function(){}));
 
@@ -7672,22 +7715,22 @@ window.fbDeleteRoomMessage=function(chatId, msgId){
       var a=[];s.forEach(function(d){a.push(d.data())});
       a.sort(function(x,y){return (y.at||0)-(x.at||0)});
       if(a.length) S.feedbacks=a;
-      draw();
+      drawSoon();
     },function(){}));
     unsubs.push(onSnapshot(collection(db,"requests"),function(s){
       var a=[];s.forEach(function(d){var x=d.data();x.id=Number(d.id);a.push(x)});
-      a.sort(function(x,y){return y.d-x.d});S.req=a;draw();
+      a.sort(function(x,y){return y.d-x.d});S.req=a;drawSoon();
     },err));
     unsubs.push(onSnapshot(collection(db,"subscriptions"),function(s){
       var a=[];s.forEach(function(d){var x=d.data();x.id=d.id;x.uid=x.uid||d.id;a.push(x)});
-      S.subs=a;draw();
+      S.subs=a;drawSoon();
     },err));
   }else{
     unsubs.push(onSnapshot(query(collection(db,"requests"),where("uid","==",u.uid)),function(s){
       var a=[];s.forEach(function(d){var x=d.data();x.id=Number(d.id);a.push(x)});
-      a.sort(function(x,y){return y.d-x.d});S.req=a;draw();
+      a.sort(function(x,y){return y.d-x.d});S.req=a;drawSoon();
     },err));
-    var sa=[],sb=[],mix=function(){S.subs=sa.concat(sb);draw()};
+    var sa=[],sb=[],mix=function(){S.subs=sa.concat(sb);drawSoon()};
     unsubs.push(onSnapshot(doc(db,"subscriptions",u.uid),function(s){
       sa=s.exists()?[{id:u.uid,uid:u.uid,e:S.email,n:s.data().n,s:s.data().s,end:s.data().end,a:s.data().a}]:[];mix();
     },err));
@@ -7695,14 +7738,14 @@ window.fbDeleteRoomMessage=function(chatId, msgId){
       sb=[];s.forEach(function(d){if(d.id!==u.uid){var x=d.data();x.id=d.id;x.e=S.email;sb.push(x)}});mix();
     },err));
   }
-  draw();
+  drawSoon();
 }
 var _unAuth=null;
 function bindAuth(){if(_unAuth){try{_unAuth()}catch(e){}}_unAuth=onAuthStateChanged(auth,onAuth)}
 window.fbUsePortal=function(p){
   var k=PORTAL_APP[p]||p;
   if(!APPS[k])return;
-  if(k===curPortal&&_unAuth){if(S.authReady)draw();return}
+  if(k===curPortal&&_unAuth){if(S.authReady)drawSoon();return}
   unsubs.forEach(function(f){try{f()}catch(e){}});unsubs=[];
   [typeof _wi!=="undefined"&&_wi,typeof _wr!=="undefined"&&_wr,typeof _wc!=="undefined"&&_wc].forEach(function(f){try{if(f)f()}catch(e){}});
   curPortal=k;app=APPS[k];auth=AUTHS[k];db=DBS[k];
@@ -7710,11 +7753,11 @@ window.fbUsePortal=function(p){
   bindAuth();
 };
 S.portalUsers={};
-PORTALS.forEach(function(p){onAuthStateChanged(AUTHS[p],function(u){S.portalUsers[p]=u?(u.email||""):"";if(S.authReady&&!S.sysRole)draw()})});
+PORTALS.forEach(function(p){onAuthStateChanged(AUTHS[p],function(u){S.portalUsers[p]=u?(u.email||""):"";if(S.authReady&&!S.sysRole)drawSoon()})});
 (function(){var sp="";try{sp=localStorage.getItem("misbar_portal")||""}catch(e){}
   var PK=["admin","pro","stu","parent"];
-  var go=function(){if(S.authReady)return;
-    if(PK.indexOf(sp)>-1){S.sysRole=S.loginRole=sp;window.fbUsePortal(sp)}else{S.authReady=true;draw()}};
+  var _goDone=0,go=function(){if(_goDone)return;_goDone=1;
+    if(PK.indexOf(sp)>-1){S.sysRole=S.loginRole=sp;window.fbUsePortal(sp)}else{S.authReady=true;drawSoon();bindAuth()}};
   Promise.all(PORTALS.map(function(p){return AUTHS[p].authStateReady()})).then(go).catch(go);
   setTimeout(go,4000);
 })();
