@@ -313,7 +313,7 @@ window.misbarHardReset=function(){
 /* ============================================================================
    [الأساس ١] رقم الإصدار ونظام التحديث التلقائي الفوري للزبائن (PWA Auto-Update)
    ============================================================================ */
-var APP_VERSION = "2.77.0";
+var APP_VERSION = "2.78.0";
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", function() {
@@ -1020,13 +1020,38 @@ async function aiFast(msgs,sys,web,onText){
   }
   throw err;
 }
+function acctAI(){return !!(window.fbAiRun&&S.uid&&!S._acctDown)}
+function aiReady(){return !!getUserKey()||acctAI()}
+function aiPartsOf(prompt,du){var parts=[{text:prompt}];if(du&&du.indexOf("base64,")>-1){var sp=du.split("base64,");parts.push({inlineData:{mimeType:(sp[0].replace("data:","").replace(";","")||"image/jpeg"),data:sp[1]}})}return parts}
+function acctFail(e){if(e&&e.code==="ai-setup"){S._acctDown=true;toast("⚠️ "+e.message)}}
+async function callAcctAI(prompt,sys,du,jsonMode,onChunk,ex){
+  ex=ex||{};
+  try{var r=await window.fbAiRun({contents:[{role:"user",parts:aiPartsOf(prompt,du)}],sys:sys,json:!!jsonMode,onText:onChunk,url:!!ex.url,web:!!ex.web});return r.txt}
+  catch(e){acctFail(e);throw e}
+}
+async function acctChat(msgs,sys,web,onText){
+  var contents=msgs.map(function(m){return {role:m.role==="assistant"?"model":"user",parts:[{text:m.content}]}});
+  try{var r=await window.fbAiRun({contents:contents,sys:sys,web:!!web,onText:onText});return r.txt}
+  catch(e){acctFail(e);throw e}
+}
+async function gGenRaw(body){
+  var k=getUserKey();
+  if(k)return await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+(S._gm&&S._gm[0]||"gemini-2.5-flash")+":generateContent?key="+encodeURIComponent(k),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  if(!acctAI())throw new Error("اربط الذكاء أولاً من تبويب الذكاء الاصطناعي");
+  var gc=body.generationConfig||{},sys=body.systemInstruction&&body.systemInstruction.parts&&body.systemInstruction.parts[0]&&body.systemInstruction.parts[0].text;
+  try{var r=await window.fbAiRun({contents:body.contents,sys:sys,json:gc.responseMimeType==="application/json"});
+    return {ok:true,status:200,json:async function(){return {candidates:[{content:{parts:[{text:r.txt}]}}]}}}}
+  catch(e){acctFail(e);throw e}
+}
 async function askAI(p,msgs,sys,web,onText){
   S.aiWeb=!!web;S.aiLast={mode:"none",src:[]};
+  if(p==="Gemini"&&!provKey("Gemini")&&acctAI()){var at=await acctChat(msgs,sys,web,onText);S.aiLast={mode:web?"native":"none",src:[]};return at}
   if(p==="Gemini"&&provKey("Gemini")){try{var r=await aiFast(msgs,sys,web,onText);S.aiLast={mode:web?"native":"none",src:r.src};return r.txt}catch(e){if(e.status===401||e.status===403)throw e}}
   return await callAIText(p,msgs,sys);
 }
-async function callUserGemini(prompt,sysInst,imgDataUrl,jsonMode,onChunk){
+async function callUserGemini(prompt,sysInst,imgDataUrl,jsonMode,onChunk,ex){
   var key=getUserKey();
+  if(!key&&acctAI()){try{return await callAcctAI(prompt,sysInst||AI_SYS,imgDataUrl,jsonMode,onChunk,ex)}catch(e){if(!(e&&e.code==="ai-setup"))throw e}}
   if(!key){
     var alt=(provKey("ChatGPT")?"ChatGPT":(provKey("Claude")?"Claude":""));
     if(alt && !imgDataUrl){
@@ -1045,7 +1070,7 @@ async function callUserGemini(prompt,sysInst,imgDataUrl,jsonMode,onChunk){
   for(var m=0;m<models.length;m++){
     var go=async function(off){
       var gc={temperature:0.65};if(jsonMode)gc.responseMimeType="application/json";if(off)gc.thinkingConfig={thinkingBudget:0};
-      var body={contents:[{role:"user",parts:parts}],generationConfig:gc};if(sysInst)body.systemInstruction={parts:[{text:sysInst}]};
+      var body={contents:[{role:"user",parts:parts}],generationConfig:gc};if(sysInst)body.systemInstruction={parts:[{text:sysInst}]};var _tl=[];if(ex&&ex.url)_tl.push({urlContext:{}});if(ex&&ex.web)_tl.push({googleSearch:{}});if(_tl.length&&!jsonMode)body.tools=_tl;
       if(onChunk&&!jsonMode)return (await gStream(key,models[m],body,onChunk)).txt;
       var res=await fetchT("https://generativelanguage.googleapis.com/v1beta/models/"+models[m]+":generateContent?key="+encodeURIComponent(key),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)},30000),data=await res.json();
       if(data&&data.candidates&&data.candidates[0]&&data.candidates[0].content)return data.candidates[0].content.parts.map(function(p){return p.text||""}).join("");
@@ -1207,7 +1232,7 @@ function symBarH(elId,subjName){
 function gwHomeV(){
   var list=S.docs||[];
   return driveBannerH()+
-  '<h2>📄 بوابة الأوراق والملازم</h2>'+
+  '<h2>📄 بوابة الأسئلة والملازم</h2>'+
   '<div class="card" style="border-inline-start:4px solid var(--ac)">'+
     '<div class="row"><div class="grow"><b>أوراق الأسئلة والملازم</b><div class="mu">اكتب أسئلتك أو ملزمتك على الهاتف، ومسبار يرتبها لك في صفحات A4 جاهزة للطباعة أو الحفظ على Google Drive.</div></div><span style="font-size:32px">🖨️</span></div>'+
     '<div class="grid" style="margin-top:10px">'+
@@ -1567,7 +1592,7 @@ return h+tbh+'</div>';
 
 async function genPaperAI(){
   if(!gate())return;
-  if(!getUserKey()){openAutoKeyConnect();return}
+  if(!aiReady()){openAutoKeyConnect();return}
   var p=S.pp,subj=p.f.subj,stage=p.f.stage||"المرحلة الدراسية";
   ask("اكتب موضوع الأسئلة ليولّدها ذكاء حسابك فوراً",async function(topic){
     var ltr=isWlangRtl(p.o.wlang)?0:1;
@@ -1634,7 +1659,7 @@ function ocrQuestionImage(i, target, inp){
   toast("🤖 جاري استخراج النص من الصورة...");
   var r = new FileReader();
   r.onload = async function(){
-    if(!getUserKey()){
+    if(!aiReady()){
        toast("⚠️ يرجى ربط حساب Gemini من تبويب الذكاء الاصطناعي لاستخراج النص"); return;
     }
     try{
@@ -2102,7 +2127,7 @@ function addBkBlock(type){
 }
 async function genBkBlockAI(){
   if(!gate())return;
-  if(!getUserKey()){openAutoKeyConnect();return}
+  if(!aiReady()){openAutoKeyConnect();return}
   var ch=S.bk.chs[S.bk.curCh];if(!ch)return;
   ask("اكتب عنوان الفقرة ليولّد ذكاء حسابك شرحاً ومثالاً محلولاً",async function(topic){
     var rtl=isWlangRtl(S.bk.o.wlang);
@@ -3817,7 +3842,7 @@ function addMatDirect(ci){
 /* ==================== بوابات الأستاذ المنظمة (٤ بوابات نظيفة بدون أي هوسة) ==================== */
 function proPortalsV(){
   if(S.proPortal === "papers"){
-    return '<div class="row" style="margin-bottom:8px"><button class="b s" onclick="S.proPortal=null;draw()">← رجوع للبوابات</button><b class="grow">بوابة الأوراق والملازم</b></div>' + gwHomeV();
+    return '<div class="row" style="margin-bottom:8px"><button class="b s" onclick="S.proPortal=null;draw()">← رجوع للبوابات</button><b class="grow">بوابة الأسئلة والملازم</b></div>' + gwHomeV();
   }
   if(S.proPortal === "qbank"){
     return '<div class="row" style="margin-bottom:8px"><button class="b s" onclick="S.proPortal=null;draw()">← رجوع للبوابات</button><b class="grow">بوابة الأسئلة وبنك الفصل</b></div>' +
@@ -3845,8 +3870,8 @@ function proPortalsV(){
     return '<div class="portal-card" onclick="'+on+'"'+(hl?' style="border-color:#15803d;background:var(--acs)"':'')+'><div class="portal-ico">'+mIc(ic,26)+'</div><div class="grow"><b>'+t+'</b><div class="mu">'+sub+'</div></div><span style="font-size:20px;color:var(--mu)">‹</span></div>';
   };
   return '<h2>ماذا تريد أن تعمل؟</h2>' +
-    card("doc","الأوراق والملازم","اكتب امتحاناً أو ملزمة وطبعها A4 ("+docsCount+" مستند)","S.proPortal='papers';draw()") +
-    card("spark","مولّد الأسئلة والملازم","اطلب من الذكاء أسئلة أو ملزمة جاهزة لمادتك","S.proPortal='sch';S.gwTab='q';draw()") +
+    card("doc","الأسئلة والملازم","اكتب امتحاناً أو ملزمة وطبعها A4 ("+docsCount+" مستند)","S.proPortal='papers';draw()") +
+    card("spark","مولّد الذكاء الاصطناعي","مولّد أسئلة ومولّد ملازم من مصادرك (PDF · Word · روابط)","S.proPortal='sch';S.gwTab='q';draw()") +
     card("chart","دفتر الدرجات","سجّل الدرجات واحسب المعدلات ("+grCount+" طالب)","S.proPortal='grades';draw()") +
     card("live","الامتحان المباشر","امتحان للطلاب بكود ومؤقت وحماية من الغش","S.proPortal='live';draw()",1) +
     card("cal","الخطط الدراسية","خطة يومية أو أسبوعية أو شهرية جاهزة للطباعة","S.proPortal='plans';draw()");
@@ -3856,7 +3881,7 @@ async function genQuickQ(){
   if(!gate())return;
   var topic=$("qt").value.trim(),kind=$("qk").value,num=Math.min(parseInt($("qn").value)||5,20);
   if(!topic){toast("اكتب الموضوع أولاً");return}
-  if(!getUserKey()){
+  if(!aiReady()){
     var qs=[],T="«"+topic+"»";
     var stems=["عرّف "+T+" وبيّن أهميته.","اذكر أهم خصائص "+T+" مع مثال توضيحي.","وضّح العلاقة بين "+T+" وما يرتبط به، معلّلاً إجابتك.","قارن بين "+T+" وما يشابهه من مفاهيم.","علّل: لماذا يُعدّ "+T+" مهماً في هذه المادة؟"];
     for(var i=1;i<=num;i++){
@@ -3886,12 +3911,19 @@ function srcOf(k){
   if(/S$/.test(k)&&!S[k]._i){S[k].level="sch";S[k]._i=1}
   return S[k];
 }
-function srcAll(o){return [o.src].concat((o.files||[]).map(function(f){return "【"+f.name+"】\n"+f.text})).filter(function(x){return String(x||"").trim()}).join("\n\n").slice(0,30000)}
+function srcLinks(o){return String((o&&o.links)||"").split(/[\s,،]+/).map(function(x){return x.trim()}).filter(function(x){return /^https?:\/\/[^\s]+\.[^\s]+$/i.test(x)}).filter(function(x,i,a){return a.indexOf(x)===i}).slice(0,20)}
+function srcExtra(o){var u=srcLinks(o);return {url:u.length>0,web:!!(o&&o.web)}}
+function srcAll(o){
+  var lk=srcLinks(o),parts=[o.src].concat((o.files||[]).map(function(f){return "【"+f.name+"】\n"+f.text}));
+  var main=parts.filter(function(x){return String(x||"").trim()}).join("\n\n").slice(0,30000);
+  if(lk.length)main+=(main?"\n\n":"")+"【روابط مصادر: افتح كل رابط واقرأ محتواه واعتمد عليه مع بقية المصادر】\n"+lk.join("\n");
+  return main;
+}
 function selH(arr,cur,setter){return '<select onchange="'+setter+'=this.value">'+arr.map(function(a){return '<option value="'+a[0]+'"'+(String(cur)===String(a[0])?' selected':'')+'>'+a[1]+'</option>'}).join("")+'</select>'}
 async function srcFileText(f){
   var ext=(f.name.split(".").pop()||"").toLowerCase();
   if(/^image\//.test(f.type)||/^(jpg|jpeg|png|webp)$/.test(ext)){
-    if(!getUserKey())throw new Error("اربط الذكاء (زر 🔑) لقراءة الصور");
+    if(!aiReady())throw new Error("اربط الذكاء (زر 🔑) لقراءة الصور");
     var du=await new Promise(function(r){shrinkImg(f,r)});if(!du)throw new Error("صورة غير صالحة");
     return String(await callUserGemini("اكتب كل النص الموجود في هذه الصورة كما هو بدون إضافة أو شرح.","أنت نظام OCR دقيق للنصوص العربية والإنجليزية.",du)||"");
   }
@@ -3899,7 +3931,7 @@ async function srcFileText(f){
     await loadLib(LIBS.pdf);pdfjsLib.GlobalWorkerOptions.workerSrc=LIBS.pdfw;
     var pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise,txt="";
     for(var p=1;p<=Math.min(pdf.numPages,80);p++){var pg=await pdf.getPage(p),tc=await pg.getTextContent();txt+=tc.items.map(function(i){return i.str}).join(" ")+"\n"}
-    if(txt.replace(/\s/g,"").length<80&&getUserKey()){
+    if(txt.replace(/\s/g,"").length<80&&aiReady()){
       txt="";
       for(var q=1;q<=Math.min(pdf.numPages,10);q++){var pg2=await pdf.getPage(q),vp=pg2.getViewport({scale:1.6}),cv=document.createElement("canvas");cv.width=vp.width;cv.height=vp.height;await pg2.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;
         txt+=String(await callUserGemini("اكتب كل النص الموجود في هذه الصفحة كما هو.","أنت نظام OCR دقيق.",cv.toDataURL("image/jpeg",0.85))||"")+"\n"}
@@ -3933,6 +3965,8 @@ function srcBoxH(k,lab){
   var o=srcOf(k);
   return '<label>'+lab+'</label><textarea rows="4" placeholder="انسخ والصق النص هنا (اختياري)" oninput="S.'+k+'.src=this.value">'+esc(o.src)+'</textarea>'+
     '<button class="b s" style="width:100%;margin-top:6px" '+(S.busy?'disabled':'')+' onclick="srcPick(\''+k+'\')">📎 رفع ملف أو عدة ملفات (PDF · Word · Excel · صور · نص)</button>'+
+    '<label>🔗 روابط مصادر (اختياري) — رابط في كل سطر</label><textarea rows="2" dir="ltr" style="text-align:start" placeholder="https://ar.wikipedia.org/wiki/...\nhttps://docs.google.com/document/d/... (يجب أن يكون الرابط عاماً)" oninput="S.'+k+'.links=this.value">'+esc(o.links||"")+'</textarea>'+
+    '<label class="opt"><input type="checkbox" '+(o.web?'checked':'')+' onchange="S.'+k+'.web=this.checked?1:0"><span>🌐 اسمح للذكاء بالبحث في الإنترنت لإكمال المعلومات</span></label>'+
     (o.files||[]).map(function(f,i){return '<div class="row" style="padding:4px 0;border-bottom:1px dashed var(--ln);font-size:12px"><span class="grow">📄 '+esc(f.name)+' <span class="mu">('+f.text.length+' حرف)</span></span><button class="b d" style="min-height:30px;padding:2px 10px" onclick="S.'+k+'.files.splice('+i+',1);draw()">✖</button></div>'}).join("");
 }
 function outBoxH(k,extra){
@@ -3994,7 +4028,7 @@ async function qgRun(k){
   if(!ts.length){toast("اختر نوع سؤال واحد على الأقل");return}
   if(!gate())return;
   S.busy=true;draw();
-  try{var a=await callUserGemini(qgPrompt(q,ts),"أنت أستاذ جامعي خبير في صياغة الأسئلة الامتحانية الدقيقة لكل المواد والتخصصات.");if(a)q.out=aiClean(a)}
+  try{var a=await callUserGemini(qgPrompt(q,ts),"أنت أستاذ جامعي خبير في صياغة الأسئلة الامتحانية الدقيقة لكل المواد والتخصصات.",null,false,null,srcExtra(q));if(a)q.out=aiClean(a)}
   catch(e){toast("خطأ: "+(e.message||e))}
   S.busy=false;draw();
 }
@@ -4039,7 +4073,7 @@ async function hbRun(k){
   if(!HB_S.some(function(s){return o.sec[s[0]]})){toast("اختر قسماً واحداً على الأقل");return}
   if(!gate())return;
   S.busy=true;draw();
-  try{var a=await callUserGemini(hbPrompt(o),"أنت أستاذ جامعي ومؤلف ملازم دراسية متميز، تكتب بوضوح وتنظيم ودقة علمية.");if(a)o.out=aiClean(a)}
+  try{var a=await callUserGemini(hbPrompt(o),"أنت أستاذ جامعي ومؤلف ملازم دراسية متميز، تكتب بوضوح وتنظيم ودقة علمية.",null,false,null,srcExtra(o));if(a)o.out=aiClean(a)}
   catch(e){toast("خطأ: "+(e.message||e))}
   S.busy=false;draw();
 }
@@ -4121,10 +4155,15 @@ function gwPortalH(g){
       '<label>أو اكتب مادة أخرى</label><input value="'+esc(cur)+'" oninput="srcOf(\'qgS\').subj=this.value;srcOf(\'hbS\').subj=this.value" placeholder="اسم المادة">'+
       '<label>المرحلة والصف</label><input value="'+esc(srcOf(kq).stage||"")+'" oninput="schStage(this.value)" placeholder="مثال: الثاني متوسط / الخامس العلمي"></div>'
     :'<div class="card"><div class="mu" style="line-height:1.7">اكتب مادتك الجامعية بالخانة داخل كل تبويب، وسوّي أسئلتك وملازمك بكل حرية لأي تخصص.</div></div>';
-  var tabs=[["q","❓ الأسئلة"],["h","📘 الملازم"],["b","🏦 بنك الفصل"],["p","📄 ورقة A4"]];
+  var tabs=[["q","❓ مولّد الأسئلة"],["h","📘 مولّد الملازم"],["b","🏦 بنك الفصل"],["p","📄 ورقة A4"]];
   var tb='<div class="row" style="flex-wrap:wrap;gap:6px;margin:8px 0">'+tabs.map(function(x){return '<button class="chip'+(t===x[0]?' on':'')+'" onclick="S.gwTab=\''+x[0]+'\';draw()">'+x[1]+'</button>'}).join("")+'</div>';
   var body=t==="q"?qgH(kq):t==="h"?hbH(kh):t==="b"?bankV():gwHomeV();
-  return head+top+tb+body;
+  return head+'<h2 style="margin:6px 0">🤖 بوابة مولّد الذكاء الاصطناعي</h2>'+aiStatusH()+top+tb+body;
+}
+function aiStatusH(){
+  var ok=getUserKey()?"✅ الذكاء مربوط بمفتاحك الخاص":(acctAI()?"✅ الذكاء مربوط تلقائياً بحسابك <b dir=\"ltr\">"+esc(S.email)+"</b> — لا تحتاج أي مفتاح":"");
+  if(ok)return '<div class="card" style="padding:10px 12px;border-inline-start:4px solid #15803d;font-size:13px">'+ok+'</div>';
+  return '<div class="card" style="padding:10px 12px;border-inline-start:4px solid #f59e0b;font-size:13px">⚠️ الذكاء المباشر غير متاح حالياً على هذا الحساب. '+(S._acctDown?"يحتاج المالك لتفعيل Firebase AI Logic مرة واحدة. ":"")+'<button class="b s" style="margin-top:6px;width:100%" onclick="openProvKeyDialog(\'Gemini\')">🔑 ربط بمفتاح Gemini (بديل)</button></div>';
 }
 function micP(){var R=window.SpeechRecognition||window.webkitSpeechRecognition;if(!R){toast("المتصفح لا يدعم الصوت، اكتب طلبك");return}S.pi=$("pi").value;var r=new R();r.lang="ar-IQ";r.onresult=function(e){S.pi=(S.pi+" "+e.results[0][0].transcript).trim();draw()};r.onerror=function(){toast("تعذر الاستماع، تأكد من إذن المايك")};r.start();toast("تكلم الآن")}
 
@@ -4142,7 +4181,7 @@ async function mkBank(){
   if(!S.bt.trim()||!types.length){toast("ألصق نص الفصل واختر نوعاً واحداً على الأقل");return}
   if(!gate())return;
 
-  if(getUserKey()){
+  if(aiReady()){
     S.busy=true;draw();
     try{
       var prompt='اعتمد حصراً على النص الدراسي التالي لتوليد '+n+' أسئلة متنوعة من الأنواع: ('+types.join("، ")+').\nتعليمات الأستاذ الخاصة: '+(S.bi||"لا توجد")+'\n\nالنص:\n'+S.bt.slice(0,12000)+'\n\nأعد النتيجة بصيغة مصفوفة JSON من النصوص فقط هكذا: ["السؤال الأول مع خياراته وجوابه","السؤال الثاني..."]';
@@ -4181,7 +4220,7 @@ async function genAIPlan(){
     ["الأربعاء","مراجعة شاملة للفصل","خرائط ذهنية","اختبار قصير"],
     ["الخميس","إثراء وتقويم ختامي","نشاط طلابي","تقييم نهائي"]
   ];
-  if(!getUserKey()){
+  if(!aiReady()){
     S.planRows=defaultRows;S.pv=1;draw();return;
   }
   S.busy=true;draw();
@@ -4233,7 +4272,7 @@ function cam(){
   var f=document.createElement("input");f.type="file";f.accept="image/*";f.setAttribute("capture","environment");
   f.onchange=function(){
     var file=f.files[0];if(!file)return;
-    if(!getUserKey()){toast("اكتب الأسماء والدرجات في المربع أعلاه أو عبر الإملاء الصوتي 🎙️");return}
+    if(!aiReady()){toast("اكتب الأسماء والدرجات في المربع أعلاه أو عبر الإملاء الصوتي 🎙️");return}
     var r=new FileReader();r.onload=async function(){
       S.busy=true;draw();
       try{
@@ -5163,7 +5202,7 @@ async function tl(k){
   S.tx=$("tt").value;if(!S.tx.trim()){toast("اكتب نصاً أولاً");return}
   if(!gate())return;
   var n=S.tx.trim().split(/\s+/).length;
-  if(!getUserKey()){
+  if(!aiReady()){
     var clean=S.tx.trim().replace(/\s+/g," ");
     S.out = k=="استلال"
       ? "نتيجة فحص الاستلال ("+n+" كلمة):\n• نسبة الأصالة التقديرية: 92%\n• النص مترابط لغوياً ويُنصح بتوثيق المراجع العلمية عند الاقتباس."
@@ -5188,7 +5227,7 @@ async function tl(k){
 /* ==================== الذكاء الاصطناعي داخل التطبيق (ChatGPT · Gemini · Claude) ====================
    كل مستخدم يربط مفتاحه الخاص (يُحفظ على جهازه فقط). المحادثة تتم داخل التطبيق بدون فتح برامج خارجية. */
 var AI_PROVS = {
-  Gemini:  { ico: "🔵", sub: "Google · مجاني", k: "g", hint: "AIza...", link: "https://aistudio.google.com/apikey", models: ["gemini-2.5-flash", "gemini-2.0-flash"] },
+  Gemini:  { ico: "🔵", sub: "Google · بحساب Gmail مباشرة", k: "g", hint: "AIza...", link: "https://aistudio.google.com/apikey", models: ["gemini-2.5-flash", "gemini-2.0-flash"] },
   ChatGPT: { ico: "🟢", sub: "OpenAI", k: "o", hint: "sk-...", link: "https://platform.openai.com/api-keys", models: ["gpt-5-mini", "gpt-4o-mini"] },
   Claude:  { ico: "🟠", sub: "Anthropic", k: "a", hint: "sk-ant-...", link: "https://console.anthropic.com/settings/keys", models: ["claude-haiku-5-5", "claude-sonnet-5-5"] }
 };
@@ -5205,7 +5244,7 @@ function setProvKey(p, k){
 }
 function firstReadyProv(){
   var order = ["Gemini", "ChatGPT", "Claude"];
-  for(var i = 0; i < order.length; i++){ if(provKey(order[i])) return order[i]; }
+  for(var i = 0; i < order.length; i++){ if(i===0?aiReady():provKey(order[i])) return order[i]; }
   return "";
 }
 function chatOf(p){ S.aiChats = S.aiChats || {}; if(!S.aiChats[p]) S.aiChats[p] = []; return S.aiChats[p]; }
@@ -5372,14 +5411,14 @@ function aiV(){
   var left = Math.max(S.free - S.used, 0);
   if(!AI_PROVS[S.prov]) S.prov = "Gemini";
   if(!S._provChosen){ var rp = firstReadyProv(); if(rp) S.prov = rp; else S.prov = "Gemini"; }
-  var P = AI_PROVS[S.prov], ready = !!provKey(S.prov), hist = chatOf(S.prov);
+  var P = AI_PROVS[S.prov], ready = S.prov === "Gemini" ? aiReady() : !!provKey(S.prov), hist = chatOf(S.prov);
   S.ai = hist;
   var tabs = Object.keys(AI_PROVS).map(function(id){
-    var q = AI_PROVS[id], ok = !!provKey(id);
+    var q = AI_PROVS[id], ok = id === "Gemini" ? aiReady() : !!provKey(id);
     return '<div class="ai-prov-card ' + (S.prov === id ? 'on' : '') + '" onclick="S.prov=\'' + id + '\';S._provChosen=true;draw()">' +
       '<div style="font-size:24px">' + q.ico + '</div><b>' + id + '</b>' +
       '<div class="mu" style="font-size:11px">' + q.sub + '</div>' +
-      '<div style="font-size:11px;font-weight:700;margin-top:3px;color:' + (ok ? '#15803d' : 'var(--mu)') + '">' + (ok ? 'جاهز ✓' : 'يحتاج مفتاحاً') + '</div></div>';
+      '<div style="font-size:11px;font-weight:700;margin-top:3px;color:' + (ok ? '#15803d' : 'var(--mu)') + '">' + (ok ? ((id === "Gemini" && !getUserKey()) ? 'متصل بحسابك ✓' : 'جاهز ✓') : 'يحتاج مفتاحاً') + '</div></div>';
   }).join("");
   var body;
   if(!ready){
@@ -5412,7 +5451,7 @@ function aiV(){
 async function sendAI(){
   var el=$("aiIn"),v=el?el.value.trim():"";
   if(!v||S.busy)return;
-  var p=S.prov;if(!provKey(p)){openProvKeyDialog(p);return}
+  var p=S.prov;if(!(p==="Gemini"?aiReady():provKey(p))){openProvKeyDialog(p);return}
   var src=S.aiSrc||"ai";
   if(src==="mat"&&!corpus().length){toast("ما عندك ملازم محفوظة للبحث فيها — ضيف ملزمة أو جرّب الذكاء");return}
   if(!gate())return;
@@ -5491,7 +5530,7 @@ var OMR = {
 
 function startBatchAIOmr(){
   if(!gate("للتصحيح الآلي اللامحدود، يرجى الاشتراك بالباقة المدفوعة.")) return;
-  if(!getUserKey()){ refundTry(); toast("يرجى ربط حساب Gemini من تبويب الذكاء الاصطناعي للقيام بالتصحيح."); return; }
+  if(!aiReady()){ refundTry(); toast("يرجى ربط حساب Gemini من تبويب الذكاء الاصطناعي للقيام بالتصحيح."); return; }
   
   if(!OMR.ansModel){
     ask("اكتب الإجابة النموذجية والدرجة القصوى (مثال: الحل النموذجي هو كذا.. من 10):", function(ans){
@@ -5526,7 +5565,7 @@ function openOmrCamera(){
               var prompt = "أنت أستاذ جامعي تصحح دفتر امتحاني بصيغة PDF. الإجابة النموذجية هي: [" + OMR.ansModel + "]. اقرأ الدفتر الامتحاني بدقة. 1. استخرج اسم الطالب بوضوح. 2. قيّم الإجابة وأعطه درجة نهائية (رقم فقط). 3. اكتب تعليقاً يبرر الدرجة. أعد النتيجة بصيغة JSON فقط: {\"name\":\"اسم الطالب\",\"score\":الدرجة,\"feedback\":\"التعليق\"}";
               
               var body = { contents: [{ role: "user", parts: [ { text: prompt }, { inlineData: { mimeType: "application/pdf", data: base64Data } } ] }], generationConfig: { temperature: 0.65, responseMimeType: "application/json" } };
-              var res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+(S._gm&&S._gm[0]||"gemini-2.5-flash")+":generateContent?key=" + encodeURIComponent(getUserKey()), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+              var res = await gGenRaw(body);
               var data = await res.json();
               
               if(res.ok && data.candidates && data.candidates[0].content){
@@ -5600,7 +5639,7 @@ async function submitOmrStudent(){
     });
     
     var body = { contents: [{ role: "user", parts: parts }], generationConfig: { temperature: 0.65, responseMimeType: "application/json" } };
-    var res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+(S._gm&&S._gm[0]||"gemini-2.5-flash")+":generateContent?key=" + encodeURIComponent(getUserKey()), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    var res = await gGenRaw(body);
     var data = await res.json();
     
     if(res.ok && data.candidates && data.candidates[0].content){
@@ -5650,7 +5689,7 @@ async function genSlides(){
   var customTxt = $("slideText") ? $("slideText").value.trim() : (S.slText||"");
   
   if(isText && !customTxt){ toast("يرجى لصق النص المطلوب استخراج العرض منه."); return; }
-  if(!getUserKey()){ openAutoKeyConnect(); return; }
+  if(!aiReady()){ openAutoKeyConnect(); return; }
   
   S.busy = true; draw();
   try{
@@ -5805,7 +5844,7 @@ async function genAiQuizBank(){
   if(!mat){ toast("اكتب موضوع المادة أو الصق نص الدرس أولاً"); return; }
   if(!gate()) return;
 
-  if(!getUserKey()){
+  if(!aiReady()){
     // توليد ذكي محلي فوري إذا لم يربط المفتاح بعد
     var localBank = [];
     for(var i=1; i<=totalGen; i++){
@@ -6602,7 +6641,7 @@ function rsParse(t){var seen={},out=[];String(t||"").split("\n").forEach(functio
 function shrinkImg(f,cb){var r=new FileReader();r.onload=function(){var im=new Image();im.onload=function(){var s=Math.min(1,1600/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=im.width*s;c.height=im.height*s;c.getContext("2d").drawImage(im,0,0,c.width,c.height);cb(c.toDataURL("image/jpeg",0.85))};im.onerror=function(){cb(null)};im.src=r.result};r.readAsDataURL(f)}
 async function rsOcr(inp){
   var fs=Array.prototype.slice.call(inp.files||[]);if(!fs.length)return;
-  if(!getUserKey()){toast("اربط Gemini أولاً (زر 🔑) لقراءة الصور");inp.value="";return}
+  if(!aiReady()){toast("اربط Gemini أولاً (زر 🔑) لقراءة الصور");inp.value="";return}
   S.busy=true;draw();var add=[];
   var P='استخرج أسماء الطلاب من هذه الصورة (قائمة رسمية). أعد JSON فقط: [{"n":"الاسم الكامل كما هو مكتوب","g":"الصف أو الشعبة إن ظهرت وإلا فارغ"}]. تجاهل الأرقام التسلسلية والعناوين والتواقيع. لا تصحّح الأسماء ولا تخترع اسماً غير موجود.';
   for(var i=0;i<fs.length;i++){
@@ -6651,7 +6690,7 @@ function rosterAdminH(cur){
   return '<div class="card" style="border-inline-start:4px solid #0891b2"><h2>👥 سجل الطلاب الرسمي ('+pub.length+')</h2>'+
     '<div class="mu" style="line-height:1.7">صوّر قائمة الأسماء الرسمية أو الصقها؛ يستخرجها الذكاء، وتراجعها أنت، ثم يولّد مسبار لكل طالب كود دخول وكود ولي أمر.</div>'+
     '<div class="grid" style="margin:8px 0"><label class="b" style="text-align:center;cursor:pointer;margin:0">📎 رفع ملفات أو تصوير<input type="file" accept=".pdf,.docx,.xlsx,.xls,.csv,.txt,image/*" multiple style="display:none" onchange="rsImport(this)"></label>'+
-    (getUserKey()?'':'<button class="b s" onclick="openProvKeyDialog(\'Gemini\')">🔑 ربط الذكاء للقراءة</button>')+'</div>'+
+    (aiReady()?'':'<button class="b s" onclick="openProvKeyDialog(\'Gemini\')">🔑 ربط الذكاء للقراءة</button>')+'</div>'+
     '<textarea rows="7" placeholder="الاسم | الصف | رقم ولي الأمر (اختياري) — سطر لكل طالب" oninput="S.rsDraft=this.value">'+esc(S.rsDraft||"")+'</textarea>'+
     rsOptsH(rc)+chk("t","👨‍🏫 أتمتة مع الأساتذة: يستوردون القائمة الرسمية بمفتاح المؤسسة")+chk("p","👨‍👩‍👦 أتمتة مع الأهالي: تفعيل كود كل ولي أمر فوراً برسالة تسجيل")+
     '<button class="b" style="width:100%;background:#0891b2;margin-top:6px" '+(S.busy?'disabled':'')+' onclick="publishRoster()">'+(S.busy?'⏳ ...':'✅ اعتماد وتوليد الأكواد'+(n?' ('+n+')':''))+'</button>'+
@@ -6667,7 +6706,7 @@ var RS_BAD=/^(اسم|الاسم|الصف|الشعبة|الشعبه|التسلس�
 function rsIsName(s){s=String(s||"").trim();var w=s.split(/\s+/);return w.length>=2&&w.length<=7&&s.length>=6&&/^[\u0621-\u064A\u0671-\u06D3\u064B-\u0652\s.\-]+$/.test(s)&&!w.some(function(x){return RS_BAD.test(x)})}
 function rsTextNames(txt){var out=[],seen={};String(txt||"").split(/\r?\n/).forEach(function(l){var r=l.match(/[\u0621-\u064A\u0671-\u06D3][\u0621-\u064A\u0671-\u06D3\u064B-\u0652\s]*/g);if(!r)return;var b=r.map(function(x){return x.trim()}).sort(function(a,c){return c.length-a.length})[0];if(b&&rsIsName(b)&&!seen[normNm(b)]){seen[normNm(b)]=1;out.push(b)}});return out}
 async function rsOcrData(du){
-  if(!getUserKey())throw new Error("اربط Gemini (زر 🔑) لقراءة الصور");
+  if(!aiReady())throw new Error("اربط Gemini (زر 🔑) لقراءة الصور");
   var P='استخرج أسماء الطلاب من هذه الصورة (قائمة رسمية). أعد JSON فقط: [{"n":"الاسم الكامل كما هو مكتوب","g":"الصف أو الشعبة إن ظهرت وإلا فارغ"}]. تجاهل الأرقام التسلسلية والعناوين والتواقيع. لا تصحّح الأسماء ولا تخترع اسماً غير موجود.';
   var raw=await callUserGemini(P,"أنت نظام OCR دقيق لقوائم أسماء الطلاب العربية.",du,true),out=[];
   JSON.parse(String(raw||"[]").replace(/```json|```/g,"").trim()).forEach(function(x){if(x&&x.n)out.push(x.n+(x.g?" | "+x.g:""));else if(typeof x==="string")out.push(x)});return out}
@@ -6873,7 +6912,7 @@ async function matAsk(src){
   S.quiz=null;
   if(src==="mat"){var r=matSearch(q,{t:m.title,x:m.text});S.out=r.length?"📄 نتائج داخل الملزمة:\n\n"+r.map(function(x,i){return (i+1)+") "+x.c.slice(0,420)}).join("\n\n"):"📄 ما لقيت «"+q+"» داخل هذي الملزمة. جرّب 🧠 الذكاء أو 🌐 الإنترنت.";draw();return}
   if(!gate())return;
-  if(!(getUserKey()||provKey("ChatGPT")||provKey("Claude"))){refundTry();openAutoKeyConnect();return}
+  if(!(aiReady()||provKey("ChatGPT")||provKey("Claude"))){refundTry();openAutoKeyConnect();return}
   S.busy=true;S.out=src==="web"?"🔎 أبحث في الإنترنت…":"⏳ يفكر…";draw();
   var upd=function(t){S.out=t;var e=$("stuOut");if(e)e.textContent=t};
   try{
@@ -6888,7 +6927,7 @@ async function runStuAI(kind){
   if(!gate())return;
   var m=S.openMat;S.quiz=null;
   var quick=kind==="تلخيص"?"⚡ ملخص فوري:\n"+quickSummary(m.text)+"\n\n":"";
-  if(!(getUserKey()||provKey("ChatGPT")||provKey("Claude"))){
+  if(!(aiReady()||provKey("ChatGPT")||provKey("Claude"))){
     S.out=quick?quick+"💡 اربط الذكاء من تبويب «الذكاء والنص» لملخص أعمق.":kind+" لـ «"+m.title+"»:\n\n"+m.text+"\n\n💡 للمناقشة الموسعة افتح ChatGPT أو Gemini أو Claude من تبويب «الذكاء والنص».";
     draw();return;
   }
@@ -6913,7 +6952,7 @@ async function startStuQuiz(){
     {q:"ما الفكرة الأساسية في درس «"+m.title+"»؟",opts:["المفهوم العلمي المذكور في نص الملزمة","موضوع خارج المنهج","تطبيق رياضي بحت","تعريف تاريخي فقط"],ans:0},
     {q:"أفضل طريقة لمراجعة «"+m.title+"» قبل الامتحان هي:",opts:["تجاهل الأمثلة","فهم المفاهيم وحل الأسئلة التطبيقية","قراءة العنوان فقط","حفظ الأرقام دون فهم"],ans:1}
   ];
-  if(!getUserKey()){S.quiz=fallback;draw();return}
+  if(!aiReady()){S.quiz=fallback;draw();return}
   S.busy=true;draw();
   try{
     var prompt='أنشئ اختباراً تفاعلياً من 5 أسئلة اختيار من متعدد بناءً على النص التالي. أعد النتيجة بصيغة JSON فقط هكذا: [{"q":"نص السؤال","opts":["خيار 1","خيار 2","خيار 3","خيار 4"],"ans":0}] حيث ans هو رقم الخيار الصحيح (0 إلى 3).\n\nالنص:\n'+m.text.slice(0,10000);
@@ -7190,6 +7229,8 @@ for(var _v of ["13.2.0","12.18.0"]){
   }catch(e){console.warn("firebase "+_v+" failed",e)}
 }
 if(!FB){throw new Error("Firebase SDK failed to load")}
+var FBAI=null;
+try{FBAI=await Promise.race([import(_b+"firebase-ai.js"),new Promise(function(_,r){setTimeout(function(){r(new Error("timeout"))},6000)})])}catch(e){console.warn("firebase-ai unavailable",e)}
 var {initializeApp}=FB[0];
 var {getAuth,GoogleAuthProvider,signInWithPopup,signInWithRedirect,getRedirectResult,reauthenticateWithPopup,onAuthStateChanged,signOut,setPersistence,indexedDBLocalPersistence,browserLocalPersistence}=FB[1];
 var {getFirestore,initializeFirestore,doc,setDoc,getDoc,updateDoc,deleteDoc,collection,onSnapshot,query,where,runTransaction,arrayUnion}=FB[2];
@@ -7210,6 +7251,35 @@ PORTALS.forEach(function(p){var a=p==="pro_stu"?initializeApp(CFG):initializeApp
 /* الدخول يبقى محفوظاً حتى يضغط المستخدم «خروج» */
 PORTALS.forEach(function(p){try{setPersistence(AUTHS[p],indexedDBLocalPersistence).catch(function(){try{setPersistence(AUTHS[p],browserLocalPersistence).catch(function(){})}catch(e){}})}catch(e){}});
 var curPortal="pro_stu",app=APPS.pro_stu,auth=AUTHS.pro_stu,db=DBS.pro_stu,unsubs=[],remotePlans=[];
+/* ===== v2.78: ذكاء Gemini مباشر بحساب Gmail (Firebase AI Logic) بدون أي مفتاح من المستخدم ===== */
+function aiE(c,m,st){var e=new Error(m);e.code=c;if(st)e.status=st;return e}
+function aiNorm(e){
+  var m=String((e&&e.message)||e),c=String((e&&e.code)||""),t=m+" "+c;
+  if(/has not been used|is disabled|not enabled|SERVICE_DISABLED|API_KEY_SERVICE_BLOCKED|firebasevertexai|firebaseml|PERMISSION_DENIED|\b403\b|requires-app-check|app-check/i.test(t))return aiE("ai-setup","الذكاء المباشر غير مفعّل بعد في مشروع Firebase (يفعّله مالك التطبيق مرة واحدة)",403);
+  if(/\b429\b|quota|RESOURCE_EXHAUSTED|rate.?limit/i.test(t))return aiE("ai-quota","وصل الذكاء المجاني لحدّه الآن، أعد المحاولة بعد دقيقة",429);
+  if(/network|failed to fetch|offline|timeout/i.test(t))return aiE("ai-net","تحقق من اتصال الإنترنت ثم أعد المحاولة");
+  return aiE("ai-fail",m.slice(0,160));
+}
+window.fbAiRun=async function(o){
+  if(!FBAI||!FBAI.getAI||!FBAI.GoogleAIBackend)throw aiE("ai-setup","خدمة الذكاء المباشر غير متاحة على هذا المتصفح");
+  var ai=FBAI.getAI(app,{backend:new FBAI.GoogleAIBackend()}),names=["gemini-2.5-flash","gemini-2.0-flash"],last=null,tools=[];
+  if(o.url)tools.push({urlContext:{}});
+  if(o.web)tools.push({googleSearch:{}});
+  var variants=(tools.length&&!o.json)?[tools,[]]:[[]];
+  for(var ni=0;ni<names.length;ni++){
+    for(var vi=0;vi<variants.length;vi++){
+      try{
+        var gc={temperature:0.65};if(o.json)gc.responseMimeType="application/json";
+        var cfg={model:names[ni],generationConfig:gc};if(o.sys)cfg.systemInstruction=o.sys;if(variants[vi].length)cfg.tools=variants[vi];
+        var mdl=FBAI.getGenerativeModel(ai,cfg),req={contents:o.contents};
+        if(o.onText&&!o.json){var st=await mdl.generateContentStream(req),acc="";for await(var ch of st.stream){acc+=ch.text();o.onText(acc)}if(acc)return {txt:acc}}
+        else{var r=await mdl.generateContent(req),tx=r.response.text();if(tx)return {txt:tx}}
+        last=aiE("ai-fail","رد فارغ");
+      }catch(e){last=aiNorm(e);if(last.code==="ai-setup"||last.code==="ai-quota"||last.code==="ai-net")throw last}
+    }
+  }
+  throw last||aiE("ai-fail","تعذر الاتصال بالذكاء");
+};
 var fail=function(e){toast(e&&e.code=="permission-denied"?"لا تملك الصلاحية":"خطأ: "+((e&&e.code)||e))};
 var err=function(e){console.warn(e&&e.code?e.code:e)};
 
